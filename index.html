@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Interview Notes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Spline+Sans:wght@400;500;600&display=swap');
+
+:root{
+  --navy:#0B1725;
+  --navy-2:#10202F;
+  --navy-3:#16293B;
+  --grid:rgba(120,190,225,0.07);
+  --grid-strong:rgba(120,190,225,0.13);
+  --cyan:#5FD8E8;
+  --cyan-dim:#3A9DB0;
+  --amber:#F2B441;
+  --coral:#FF7A5C;
+  --paper:#E8F1F5;
+  --paper-2:#A9C2D1;
+  --paper-3:#6E8799;
+  --line:rgba(120,190,225,0.18);
+  --line-2:rgba(120,190,225,0.3);
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Spline Sans', sans-serif;
+  --font-mono:'JetBrains Mono', monospace;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background-color:var(--navy);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(var(--grid-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-strong) 1px, transparent 1px);
+  background-size: 28px 28px, 28px 28px, 140px 140px, 140px 140px;
+  color:var(--paper);
+  font-family:var(--font-body);
+  font-size:16.5px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+
+a{color:var(--cyan); text-decoration:none;}
+a:hover{color:var(--amber);}
+
+.layout{display:grid; grid-template-columns:300px 1fr; min-height:100vh;}
+
+/* ---------------- Sidebar ---------------- */
+.sidebar{
+  border-right:1px solid var(--line);
+  padding:34px 22px 50px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:linear-gradient(180deg, rgba(11,23,37,0.96), rgba(11,23,37,0.82));
+  backdrop-filter:blur(3px);
+}
+.brand{
+  font-family:var(--font-display);
+  font-weight:700; font-size:19px; letter-spacing:-0.3px;
+  line-height:1.2; margin-bottom:4px;
+}
+.brand .brand-ml{color:var(--amber);}
+.brand-sub{
+  font-family:var(--font-mono); font-size:10px; color:var(--paper-3);
+  text-transform:uppercase; letter-spacing:2px; margin-bottom:30px;
+  padding-bottom:16px; border-bottom:1px solid var(--line);
+}
+.nav-list{list-style:none; margin:0; padding:0;}
+.nav-item a{
+  display:flex; gap:12px; align-items:baseline;
+  color:var(--paper-2); padding:9px 12px; border-radius:5px;
+  font-size:14px; line-height:1.4; border-left:2px solid transparent;
+  transition:background .15s, color .15s, border-color .15s;
+}
+.nav-item a:hover{background:var(--navy-3); color:var(--paper);}
+.nav-item a.active{
+  color:var(--navy); background:var(--cyan); font-weight:600;
+  border-left:2px solid var(--amber);
+}
+.nav-item a.active .nav-sec{color:var(--navy);}
+.nav-sec{font-family:var(--font-mono); color:var(--amber); font-size:11px; min-width:24px; font-weight:500;}
+.nav-item.stub a{color:var(--paper-3);}
+.nav-item.stub .nav-sec{color:var(--paper-3);}
+
+/* ---------------- Main ---------------- */
+main{padding:70px 72px 120px; max-width:920px;}
+.eyebrow{
+  font-family:var(--font-mono); color:var(--amber); font-size:11.5px;
+  letter-spacing:3px; text-transform:uppercase; margin-bottom:18px;
+  display:flex; align-items:center; gap:12px;
+}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--line-2); max-width:180px;}
+
+h1.title{
+  font-family:var(--font-display); font-size:56px; font-weight:700;
+  margin:0 0 18px; line-height:1.05; letter-spacing:-1.8px;
+}
+h1.title em{font-style:normal; color:var(--cyan);}
+.subtitle{
+  font-size:19px; color:var(--paper-2); margin:0 0 46px; max-width:660px;
+  line-height:1.6;
+}
+
+h2{
+  font-family:var(--font-display); font-size:28px; font-weight:600;
+  margin:64px 0 20px; letter-spacing:-0.6px; display:flex; align-items:center; gap:14px;
+}
+h2::before{
+  content:""; width:9px; height:9px; background:var(--amber);
+  transform:rotate(45deg); flex-shrink:0;
+}
+h3{
+  font-family:var(--font-display); font-size:19px; font-weight:600;
+  margin:34px 0 10px; color:var(--cyan); letter-spacing:-0.2px;
+}
+p{margin:0 0 18px; color:var(--paper-2);}
+p strong, li strong{color:var(--paper); font-weight:600;}
+ul,ol{margin:0 0 18px; padding-left:20px; color:var(--paper-2);}
+li{margin-bottom:8px;}
+li::marker{color:var(--cyan-dim);}
+code{
+  font-family:var(--font-mono); background:var(--navy-3); color:var(--cyan);
+  border:1px solid var(--line); padding:2px 6px; border-radius:4px; font-size:0.87em;
+}
+
+/* ---------------- Hero plot ---------------- */
+.hero-plot{
+  margin:0 0 50px; border:1px solid var(--line-2); border-radius:12px;
+  background:linear-gradient(160deg, var(--navy-2), rgba(11,23,37,0.4));
+  padding:18px; position:relative; overflow:hidden;
+}
+.hero-plot svg{display:block; width:100%; height:auto;}
+.hero-tag{
+  position:absolute; top:16px; right:20px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px;
+  color:var(--paper-3); text-transform:uppercase;
+}
+@keyframes dashIn{ to { stroke-dashoffset:0; } }
+@keyframes popIn{ from { opacity:0; } to {opacity:1; } }
+.fit-line{stroke-dasharray:640; stroke-dashoffset:640; animation:dashIn 1.8s ease-out .5s forwards;}
+.pt{opacity:0; animation:popIn .5s ease-out forwards;}
+
+/* ---------------- Callouts ---------------- */
+.callout{
+  background:var(--navy-2); border:1px solid var(--line);
+  border-left:3px solid var(--cyan); border-radius:0 10px 10px 0;
+  padding:20px 24px; margin:26px 0; font-size:15.5px; color:var(--paper-2);
+}
+.callout p:last-child{margin-bottom:0;}
+.callout .callout-label{
+  font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+  letter-spacing:2px; color:var(--cyan); margin-bottom:8px; display:block; font-weight:500;
+}
+.callout.warn{border-left-color:var(--coral);}
+.callout.warn .callout-label{color:var(--coral);}
+
+/* ---------------- Formula ---------------- */
+.formula-box{
+  background:linear-gradient(90deg, rgba(95,216,232,0.04), transparent), var(--navy-2);
+  border:1px solid var(--line); border-radius:10px;
+  padding:24px 28px; margin:24px 0; overflow-x:auto; position:relative;
+}
+.formula-box::before{
+  content:""; position:absolute; left:0; top:14px; bottom:14px; width:2px;
+  background:linear-gradient(180deg, var(--cyan), transparent);
+}
+.formula-box .fb-label{
+  font-family:var(--font-mono); font-size:10px; color:var(--paper-3);
+  text-transform:uppercase; letter-spacing:2px; margin-bottom:14px;
+}
+.katex{color:var(--paper) !important; font-size:1.08em !important;}
+
+/* ---------------- Diagrams ---------------- */
+figure.diagram{
+  margin:34px 0; background:var(--navy-2);
+  border:1px solid var(--line-2); border-radius:12px; padding:26px 24px 18px;
+  position:relative;
+}
+figure.diagram::before{
+  content:"FIG"; position:absolute; top:14px; left:22px;
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:2px; color:var(--paper-3);
+}
+figure.diagram svg{display:block; width:100%; height:auto; margin-top:8px;}
+figcaption{
+  font-family:var(--font-mono); font-size:11.5px; color:var(--paper-3);
+  margin-top:16px; padding-top:12px; border-top:1px solid var(--line);
+  line-height:1.6;
+}
+
+/* ---------------- Q&A ---------------- */
+.qa-item{
+  border:1px solid var(--line); border-radius:10px; margin-bottom:14px;
+  background:var(--navy-2); overflow:hidden; transition:border-color .2s;
+}
+.qa-item:hover{border-color:var(--line-2);}
+.qa-item[open]{border-color:var(--cyan-dim); background:var(--navy-3);}
+.qa-item summary{
+  list-style:none; cursor:pointer; padding:18px 22px;
+  display:flex; gap:16px; align-items:flex-start;
+  font-weight:600; font-size:16px; color:var(--paper);
+  font-family:var(--font-display);
+}
+.qa-item summary::-webkit-details-marker{display:none;}
+.qa-item summary::before{
+  content:"?"; font-family:var(--font-mono); font-weight:700;
+  color:var(--amber); border:1px solid rgba(242,180,65,0.4);
+  background:rgba(242,180,65,0.08);
+  width:24px; height:24px; min-width:24px; border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; margin-top:2px;
+}
+.qa-item[open] summary::before{content:"−"; color:var(--cyan); border-color:var(--cyan-dim); background:rgba(95,216,232,0.1);}
+.qa-body{padding:0 22px 22px 62px; color:var(--paper-2); font-size:15.5px;}
+.qa-body p{margin:0 0 14px;}
+.followup{
+  margin-top:16px; padding:14px 18px;
+  background:rgba(242,180,65,0.07);
+  border:1px solid rgba(242,180,65,0.22);
+  border-radius:8px; font-size:14.5px; color:var(--paper-2);
+}
+.followup .fu-label{
+  font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+  letter-spacing:1.6px; color:var(--amber); display:block; margin-bottom:6px;
+}
+
+/* ---------------- Video slot ---------------- */
+.video-slot{
+  margin-top:22px; border:1.5px dashed var(--line-2); border-radius:12px;
+  padding:44px 24px; text-align:center; color:var(--paper-3);
+  font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.5px;
+  background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(120,190,225,0.02) 12px, rgba(120,190,225,0.02) 24px);
+}
+
+/* ---------------- Topic index cards ---------------- */
+.topic-grid{list-style:none; padding:0; margin:0; display:grid; gap:12px;}
+.topic-card{
+  border:1px solid var(--line); border-radius:10px; background:var(--navy-2);
+  padding:20px 24px; display:flex; align-items:center; gap:22px;
+  transition:border-color .2s, transform .2s, background .2s;
+}
+.topic-card:hover{border-color:var(--cyan-dim); transform:translateX(4px); background:var(--navy-3);}
+.tc-num{
+  font-family:var(--font-mono); font-size:26px; font-weight:700;
+  color:var(--amber); min-width:52px; letter-spacing:-1px;
+}
+.tc-body{flex:1;}
+.tc-title{
+  font-family:var(--font-display); font-size:18px; font-weight:600;
+  color:var(--paper); display:block; letter-spacing:-0.3px;
+}
+.topic-card:hover .tc-title{color:var(--cyan);}
+.tc-desc{font-size:13.5px; color:var(--paper-3); margin-top:2px;}
+.tc-status{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:1.5px;
+  text-transform:uppercase; padding:4px 10px; border-radius:20px;
+  border:1px solid var(--line-2); color:var(--paper-3); white-space:nowrap;
+}
+.tc-status.ready{color:var(--navy); background:var(--cyan); border-color:var(--cyan);}
+
+.topic-footer-nav{
+  display:flex; justify-content:space-between; align-items:center; gap:20px;
+  margin-top:70px; padding-top:24px; border-top:1px solid var(--line);
+  font-family:var(--font-mono); font-size:12.5px;
+}
+.topic-footer-nav span{color:var(--paper-3);}
+
+@media (prefers-reduced-motion: reduce){
+  .fit-line, .pt{animation:none; stroke-dashoffset:0; opacity:1;}
+}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{position:relative; height:auto;}
+  main{padding:40px 24px 80px;}
+  h1.title{font-size:38px;}
+  .qa-body{padding-left:22px;}
+}
+
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar"><div class="brand">ML <span class="brand-ml">Interview</span><br>Notes</div><div class="brand-sub">Core ML — 10 sections</div><ul class="nav-list"><li class="nav-item"><a href="index.html" class="active"><span class="nav-sec">·</span><span>Home</span></a></li><li class="nav-item"><a href="topics/stats-probability.html" class=""><span class="nav-sec">§0</span><span>Statistics & Probability Primer</span></a></li><li class="nav-item stub"><a href="topics/preprocessing.html" class=""><span class="nav-sec">§1</span><span>Data Preprocessing & Cleaning</span></a></li><li class="nav-item stub"><a href="topics/foundations.html" class=""><span class="nav-sec">§2</span><span>Foundations: Bias-Variance & Regularization</span></a></li><li class="nav-item stub"><a href="topics/regression.html" class=""><span class="nav-sec">§3</span><span>Regression: Linear & Polynomial</span></a></li><li class="nav-item stub"><a href="topics/classification.html" class=""><span class="nav-sec">§4</span><span>Classification: Logistic, KNN, NB, SVM</span></a></li><li class="nav-item stub"><a href="topics/trees.html" class=""><span class="nav-sec">§5</span><span>Decision Trees</span></a></li><li class="nav-item stub"><a href="topics/ensemble.html" class=""><span class="nav-sec">§6</span><span>Ensemble Learning</span></a></li><li class="nav-item stub"><a href="topics/unsupervised.html" class=""><span class="nav-sec">§7</span><span>Unsupervised: K-Means, PCA</span></a></li><li class="nav-item stub"><a href="topics/evaluation.html" class=""><span class="nav-sec">§8</span><span>Model Evaluation & Validation</span></a></li><li class="nav-item stub"><a href="topics/pipeline.html" class=""><span class="nav-sec">§9</span><span>End-to-End ML Pipeline</span></a></li></ul></nav>
+  <main>
+    <div class="eyebrow">Core Machine Learning</div>
+    <h1 class="title">Everything they'll<br>ask you about <em>ML</em>.</h1>
+    <p class="subtitle">Ten sections, in the order you'd actually learn them — worked math, drafting-table diagrams, and the follow-up questions interviewers use to find the edge of what you know.</p>
+
+    <div class="hero-plot">
+      <span class="hero-tag">fig. 00 — least squares fit</span>
+      <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot with a fitted regression line">
+        <line x1="60" y1="250" x2="780" y2="250" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <line x1="60" y1="30" x2="60" y2="250" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+
+        <line x1="60" y1="196" x2="780" y2="196" stroke="rgba(120,190,225,0.1)" stroke-width="1"/>
+        <line x1="60" y1="140" x2="780" y2="140" stroke="rgba(120,190,225,0.1)" stroke-width="1"/>
+        <line x1="60" y1="86" x2="780" y2="86" stroke="rgba(120,190,225,0.1)" stroke-width="1"/>
+
+        <line class="fit-line" x1="80" y1="228" x2="760" y2="62" stroke="#F2B441" stroke-width="2.5" stroke-linecap="round"/>
+
+        <circle class="pt" cx="110" cy="232" r="5" fill="#5FD8E8" opacity="0" style="animation-delay:.10s"/>
+        <circle class="pt" cx="158" cy="205" r="5" fill="#5FD8E8" style="animation-delay:.18s"/>
+        <circle class="pt" cx="196" cy="222" r="5" fill="#5FD8E8" style="animation-delay:.26s"/>
+        <circle class="pt" cx="243" cy="188" r="5" fill="#5FD8E8" style="animation-delay:.34s"/>
+        <circle class="pt" cx="288" cy="197" r="5" fill="#5FD8E8" style="animation-delay:.42s"/>
+        <circle class="pt" cx="330" cy="163" r="5" fill="#5FD8E8" style="animation-delay:.50s"/>
+        <circle class="pt" cx="378" cy="178" r="5" fill="#5FD8E8" style="animation-delay:.58s"/>
+        <circle class="pt" cx="422" cy="142" r="5" fill="#5FD8E8" style="animation-delay:.66s"/>
+        <circle class="pt" cx="470" cy="155" r="5" fill="#5FD8E8" style="animation-delay:.74s"/>
+        <circle class="pt" cx="515" cy="118" r="5" fill="#5FD8E8" style="animation-delay:.82s"/>
+        <circle class="pt" cx="560" cy="132" r="5" fill="#5FD8E8" style="animation-delay:.90s"/>
+        <circle class="pt" cx="606" cy="100" r="5" fill="#5FD8E8" style="animation-delay:.98s"/>
+        <circle class="pt" cx="650" cy="112" r="5" fill="#5FD8E8" style="animation-delay:1.06s"/>
+        <circle class="pt" cx="700" cy="78" r="5" fill="#5FD8E8" style="animation-delay:1.14s"/>
+        <circle class="pt" cx="742" cy="88" r="5" fill="#5FD8E8" style="animation-delay:1.22s"/>
+
+        <text x="60" y="278" font-family="JetBrains Mono" font-size="11" fill="#6E8799">x — feature</text>
+        <text x="24" y="36" font-family="JetBrains Mono" font-size="11" fill="#6E8799">y</text>
+      </svg>
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">How to use this</span>
+      Work top to bottom, §0 → §9. Each section ends with an interview Q&amp;A set — open a question to reveal the answer, and every answer carries the follow-up an interviewer would hit you with next.
+    </div>
+
+    <h2>Sections</h2>
+    <ul class="topic-grid">
+      <li><a href="topics/stats-probability.html" class="topic-card">
+        <span class="tc-num">00</span>
+        <span class="tc-body"><span class="tc-title">Statistics &amp; Probability Primer</span>
+        <span class="tc-desc">Variance, Bayes' theorem, distributions, CLT, correlation vs causation</span></span>
+        <span class="tc-status ready">ready</span>
+      </a></li>
+
+      <li><a href="topics/preprocessing.html" class="topic-card">
+        <span class="tc-num">01</span>
+        <span class="tc-body"><span class="tc-title">Data Preprocessing &amp; Cleaning</span>
+        <span class="tc-desc">Missing data, outliers, encoding, scaling, imbalanced datasets &amp; SMOTE</span></span>
+        <span class="tc-status">next up</span>
+      </a></li>
+
+      <li><a href="topics/foundations.html" class="topic-card">
+        <span class="tc-num">02</span>
+        <span class="tc-body"><span class="tc-title">Foundations</span>
+        <span class="tc-desc">Bias-variance tradeoff, overfitting, L1/L2 regularization</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/regression.html" class="topic-card">
+        <span class="tc-num">03</span>
+        <span class="tc-body"><span class="tc-title">Regression</span>
+        <span class="tc-desc">Linear, polynomial, gradient descent, multicollinearity</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/classification.html" class="topic-card">
+        <span class="tc-num">04</span>
+        <span class="tc-body"><span class="tc-title">Classification</span>
+        <span class="tc-desc">Logistic regression, KNN &amp; curse of dimensionality, Naive Bayes, SVM</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/trees.html" class="topic-card">
+        <span class="tc-num">05</span>
+        <span class="tc-body"><span class="tc-title">Decision Trees</span>
+        <span class="tc-desc">Gini impurity, entropy, information gain, pruning</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/ensemble.html" class="topic-card">
+        <span class="tc-num">06</span>
+        <span class="tc-body"><span class="tc-title">Ensemble Learning</span>
+        <span class="tc-desc">Bagging, boosting, stacking, AdaBoost, gradient boosting, XGBoost</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/unsupervised.html" class="topic-card">
+        <span class="tc-num">07</span>
+        <span class="tc-body"><span class="tc-title">Unsupervised Learning</span>
+        <span class="tc-desc">K-Means, hierarchical clustering, PCA &amp; dimensionality reduction</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/evaluation.html" class="topic-card">
+        <span class="tc-num">08</span>
+        <span class="tc-body"><span class="tc-title">Model Evaluation &amp; Validation</span>
+        <span class="tc-desc">Confusion matrix, ROC-AUC, k-fold &amp; stratified CV, tuning</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+
+      <li><a href="topics/pipeline.html" class="topic-card">
+        <span class="tc-num">09</span>
+        <span class="tc-body"><span class="tc-title">End-to-End ML Pipeline</span>
+        <span class="tc-desc">The full "walk me through your process" answer, start to deployment</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+    </ul>
+  </main>
+</div>
+</body>
+</html>
