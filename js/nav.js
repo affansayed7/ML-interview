@@ -27,7 +27,7 @@ function renderSidebar(activeId, base) {
   var mount = document.getElementById("sidebar-mount");
   if (!mount) return;
   var html = '<div class="brand">ML <span class="brand-ml">Interview</span><br>Notes</div>' +
-             '<div class="brand-sub">Core ML &mdash; 10 sections</div><ul class="nav-list">';
+             '<div class="brand-sub">Core ML, DL &amp; NLP</div><ul class="nav-list">';
   html += '<li class="nav-item"><a href="' + base + 'index.html" class="' +
           (activeId === "" ? "active" : "") + '"><span class="nav-sec">&middot;</span><span>Home</span></a></li>';
   TOPICS.forEach(function (t) {
