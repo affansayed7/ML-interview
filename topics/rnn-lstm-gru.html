@@ -3,23 +3,279 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Section 14 RNNs, LSTM & GRU - ML Interview Notes</title>
+<title>§14 RNNs, LSTM & GRU — ML Interview Notes</title>
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
 </head>
 <body>
 <div class="layout">
   <nav class="sidebar"><div id="sidebar-mount"></div></nav>
   <main>
-    <div class="eyebrow">Section 14</div>
-    <h1 class="title">RNNs, LSTM & GRU</h1>
-    <p class="subtitle">Not yet written — full math, diagrams, and interview Q&amp;A are on the way.</p>
-    <div class="callout warn">
-      <span class="callout-label">Status</span>
-      Queued. This section will get the same treatment as Statistics &amp; Probability and Linear Regression: derivations, blueprint diagrams, Q&amp;A with follow-ups, and a video slot.
+    <div class="eyebrow">§14 · Deep Learning</div>
+    <h1 class="title">RNNs, LSTM<br>&amp; <em>GRU</em></h1>
+    <p class="subtitle">The architectures that made sequence modeling work before Transformers took over — still asked constantly, because they're where "vanishing gradients" and "gates" actually make intuitive sense for the first time.</p>
+
+    <h2>1. Why plain RNNs exist</h2>
+    <p>Feedforward networks assume every input is independent — but language, time series, and audio all have <strong>order</strong>: what comes next depends on what came before. A Recurrent Neural Network handles this by carrying a <strong>hidden state</strong> forward through time, updating it at every step with both the new input and everything it remembers so far.</p>
+
+    <div class="formula-box">
+      <div class="fb-label">RNN recurrence</div>
+      $$ h_t = \tanh(W_{hh}\,h_{t-1} + W_{xh}\,x_t + b_h) $$
+      $$ y_t = W_{hy}\,h_t + b_y $$
     </div>
+    <p>The same weight matrices $W_{hh}, W_{xh}, W_{hy}$ are reused at <em>every</em> timestep — this weight sharing is what lets an RNN handle sequences of any length with a fixed number of parameters.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unrolled RNN across three timesteps">
+        <text x="30" y="20" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">rolled</text>
+        <rect x="20" y="70" width="70" height="55" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="55" y="102" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#E8F1F5">h</text>
+        <path d="M 55 70 C 55 40, 20 40, 20 70" fill="none" stroke="#5FD8E8" stroke-width="1.3" marker-end="url(#arrow1)"/>
+        <line x1="120" y1="97" x2="160" y2="97" stroke="#F2B441" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <text x="140" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#F2B441">unroll</text>
+
+        <g>
+          <rect x="190" y="70" width="90" height="55" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
+          <text x="235" y="102" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#E8F1F5">h₀</text>
+          <line x1="235" y1="145" x2="235" y2="128" stroke="#A9C2D1" stroke-width="1.3" marker-end="url(#arrow1)"/>
+          <text x="235" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">x₁</text>
+          <line x1="280" y1="97" x2="330" y2="97" stroke="#5FD8E8" stroke-width="1.5" marker-end="url(#arrow1)"/>
+        </g>
+        <g>
+          <rect x="330" y="70" width="90" height="55" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
+          <text x="375" y="102" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#E8F1F5">h₁</text>
+          <line x1="375" y1="145" x2="375" y2="128" stroke="#A9C2D1" stroke-width="1.3" marker-end="url(#arrow1)"/>
+          <text x="375" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">x₂</text>
+          <line x1="420" y1="97" x2="470" y2="97" stroke="#5FD8E8" stroke-width="1.5" marker-end="url(#arrow1)"/>
+        </g>
+        <g>
+          <rect x="470" y="70" width="90" height="55" rx="8" fill="rgba(242,180,65,0.12)" stroke="#F2B441" stroke-width="1.3"/>
+          <text x="515" y="102" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#E8F1F5">h₂</text>
+          <line x1="515" y1="145" x2="515" y2="128" stroke="#A9C2D1" stroke-width="1.3" marker-end="url(#arrow1)"/>
+          <text x="515" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">x₃</text>
+          <line x1="515" y1="70" x2="515" y2="35" stroke="#F2B441" stroke-width="1.5" marker-end="url(#arrow1)"/>
+          <text x="515" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">y₃</text>
+        </g>
+        <defs>
+          <marker id="arrow1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#5FD8E8"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>The same cell (same weights) is reused at every timestep. "Unrolling" just visualizes one recurrent cell applied repeatedly across time.</figcaption>
+    </figure>
+
+    <h2>2. Backpropagation Through Time &amp; the vanishing gradient problem</h2>
+    <p>Training an RNN means backpropagating the loss all the way back through every timestep — called <strong>BPTT</strong>. The gradient with respect to an early hidden state involves a <em>product</em> of many Jacobians, one per timestep in between:</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Gradient flowing back through time</div>
+      $$ \frac{\partial h_t}{\partial h_0} = \prod_{k=1}^{t} \frac{\partial h_k}{\partial h_{k-1}} \approx \prod_{k=1}^{t} W_{hh}^T \cdot \text{diag}(\tanh'(\cdot)) $$
+    </div>
+    <p>If the repeated term is consistently less than 1, this product shrinks <strong>exponentially</strong> toward zero as $t$ grows — the <strong>vanishing gradient</strong> problem, where early timesteps get virtually no learning signal and the model "forgets" long-range dependencies. If it's consistently greater than 1, gradients <strong>explode</strong> instead, causing unstable, huge weight updates. Because $\tanh'(\cdot) \le 1$ always, and is often much smaller, vanishing is the far more common failure mode in practice.</p>
+
+    <div class="callout warn">
+      <span class="callout-label">Why this matters</span>
+      A plain RNN can technically "see" 50 timesteps back, but if the gradient from timestep 50 has vanished to near-zero by the time it reaches timestep 1, the model never actually learns to use information that far back. LSTM and GRU exist specifically to fix this.
+    </div>
+
+    <h2>3. LSTM — Long Short-Term Memory</h2>
+    <p>LSTM's key idea: maintain a separate <strong>cell state</strong> $C_t$ that acts like a conveyor belt running through the whole sequence, modified only by simple, mostly-linear operations (not squashed through tanh every step). Three "gates" — each a sigmoid layer producing values between 0 and 1 — control what gets added to, removed from, or read out of that cell state.</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Forget gate — what to erase from the cell state</div>
+      $$ f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f) $$
+      <div class="fb-label" style="margin-top:16px;">Input gate — what new info to write in</div>
+      $$ i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i) $$
+      $$ \tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C) $$
+      <div class="fb-label" style="margin-top:16px;">Cell state update</div>
+      $$ C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t $$
+      <div class="fb-label" style="margin-top:16px;">Output gate — what to expose as the hidden state</div>
+      $$ o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o) $$
+      $$ h_t = o_t \odot \tanh(C_t) $$
+    </div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LSTM cell internal structure with forget, input, and output gates">
+        <line x1="30" y1="50" x2="690" y2="50" stroke="#F2B441" stroke-width="2"/>
+        <text x="30" y="34" font-family="JetBrains Mono" font-size="10.5" fill="#F2B441">cell state Cₜ₋₁ → Cₜ (the conveyor belt)</text>
+
+        <circle cx="150" cy="50" r="16" fill="rgba(255,122,92,0.15)" stroke="#FF7A5C" stroke-width="1.3"/>
+        <text x="150" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#FF7A5C">×</text>
+        <rect x="115" y="120" width="70" height="42" rx="7" fill="rgba(255,122,92,0.1)" stroke="#FF7A5C" stroke-width="1.2"/>
+        <text x="150" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#FF7A5C">fₜ</text>
+        <text x="150" y="180" text-anchor="middle" font-family="Spline Sans" font-size="10.5" fill="#A9C2D1">forget gate</text>
+        <line x1="150" y1="120" x2="150" y2="66" stroke="#FF7A5C" stroke-width="1.3" marker-end="url(#arrow2)"/>
+
+        <circle cx="330" cy="50" r="16" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="330" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#5FD8E8">+</text>
+        <rect x="270" y="120" width="65" height="42" rx="7" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="302" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#5FD8E8">iₜ</text>
+        <text x="302" y="180" text-anchor="middle" font-family="Spline Sans" font-size="10.5" fill="#A9C2D1">input gate</text>
+        <rect x="345" y="120" width="65" height="42" rx="7" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="377" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#5FD8E8">C̃ₜ</text>
+        <text x="377" y="180" text-anchor="middle" font-family="Spline Sans" font-size="10.5" fill="#A9C2D1">candidate</text>
+        <line x1="330" y1="120" x2="330" y2="66" stroke="#5FD8E8" stroke-width="1.3" marker-end="url(#arrow2)"/>
+
+        <rect x="560" y="80" width="70" height="42" rx="7" fill="rgba(242,180,65,0.12)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="595" y="105" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#F2B441">oₜ</text>
+        <text x="595" y="140" text-anchor="middle" font-family="Spline Sans" font-size="10.5" fill="#A9C2D1">output gate</text>
+        <circle cx="595" cy="50" r="16" fill="rgba(242,180,65,0.15)" stroke="#F2B441" stroke-width="1.3"/>
+        <text x="595" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#F2B441">×</text>
+        <line x1="595" y1="80" x2="595" y2="66" stroke="#F2B441" stroke-width="1.3" marker-end="url(#arrow2)"/>
+        <line x1="595" y1="50" x2="595" y2="180" stroke="#F2B441" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="650" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">hₜ</text>
+        <line x1="595" y1="180" x2="640" y2="195" stroke="#F2B441" stroke-width="1.3" marker-end="url(#arrow2)"/>
+
+        <defs>
+          <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>Forget gate decides what to erase from the cell state; input gate decides what new candidate values to write in; output gate decides what part of the (updated) cell state becomes the visible hidden state.</figcaption>
+    </figure>
+
+    <h3>Why this actually fixes vanishing gradients</h3>
+    <p>The cell state update $C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$ is <strong>additive</strong>, not repeatedly squashed through a nonlinearity like the plain RNN's hidden state. When the forget gate is close to 1, gradient can flow backward through the cell state almost unchanged across many timesteps — this pathway is often called the <strong>constant error carousel</strong>. The gates are learned, so the network can decide for itself when to preserve long-range information and when to discard it.</p>
+
+    <h2>4. GRU — Gated Recurrent Unit</h2>
+    <p>GRU is a simplification: it merges the cell state and hidden state into one, and uses only two gates instead of three — fewer parameters, faster to train, and in practice performs comparably to LSTM on most tasks.</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Update gate — how much of the past to keep</div>
+      $$ z_t = \sigma(W_z \cdot [h_{t-1}, x_t]) $$
+      <div class="fb-label" style="margin-top:16px;">Reset gate — how much past to ignore when proposing new content</div>
+      $$ r_t = \sigma(W_r \cdot [h_{t-1}, x_t]) $$
+      <div class="fb-label" style="margin-top:16px;">Candidate activation</div>
+      $$ \tilde{h}_t = \tanh(W \cdot [r_t \odot h_{t-1}, x_t]) $$
+      <div class="fb-label" style="margin-top:16px;">Final hidden state — a blend of old and new</div>
+      $$ h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t $$
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">LSTM vs GRU — how to answer the tradeoff question</span>
+      GRU has 2 gates and one state vector; LSTM has 3 gates and two state vectors (cell + hidden). GRU trains faster and needs less data due to fewer parameters. LSTM's separate cell state gives it slightly more expressive control over memory, which can matter on very long sequences or larger datasets. In practice: try GRU first for speed, reach for LSTM if you have ample data and need that extra memory capacity — but always benchmark both, since no architecture reliably wins across all tasks.
+    </div>
+
+    <h2>5. Where these still get used</h2>
+    <p>Transformers have replaced RNN/LSTM/GRU for most large-scale NLP, but recurrent architectures are still relevant for: time-series forecasting, smaller datasets where a Transformer's data hunger is a liability, streaming/low-latency inference (RNNs process one token at a time with constant memory, unlike attention's quadratic cost), and as a component inside larger systems (e.g. decoders in some speech models).</p>
+
+    <h2>6. Quick implementation</h2>
+    <div class="formula-box">
+      <div class="fb-label">PyTorch</div>
+      <pre style="margin:0; font-family:var(--font-mono); font-size:14px; color:var(--paper-2); white-space:pre-wrap;">import torch.nn as nn
+
+lstm = nn.LSTM(input_size=128, hidden_size=256, num_layers=1, batch_first=True)
+output, (h_n, c_n) = lstm(x)   # x: (batch, seq_len, input_size)
+
+gru = nn.GRU(input_size=128, hidden_size=256, num_layers=1, batch_first=True)
+output, h_n = gru(x)           # GRU has no separate cell state</pre>
+    </div>
+
+    <h2>Interview Q&amp;A</h2>
+    <div class="qa-section">
+
+      <details class="qa-item">
+        <summary>Explain why plain RNNs suffer from vanishing gradients, in your own words.</summary>
+        <div class="qa-body">
+          <p>Backpropagation through time requires multiplying the same recurrent weight matrix (and the derivative of tanh, which is always ≤1) once per timestep going backward. Multiplying many numbers less than 1 together shrinks the product exponentially toward zero, so gradients from early timesteps become vanishingly small by the time they influence weight updates — the model effectively can't learn dependencies spanning many steps.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "What's the difference between vanishing and exploding gradients, and when does each happen?" — vanishing happens when the repeated multiplicative term is consistently &lt;1 (shrinks to 0); exploding happens when it's consistently &gt;1 (grows unboundedly). Exploding gradients are usually fixed with gradient clipping; vanishing gradients need an architectural fix like LSTM/GRU.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Why does the LSTM cell state help with the vanishing gradient problem specifically?</summary>
+        <div class="qa-body">
+          <p>Because the cell state is updated additively ($C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$) rather than being passed through a squashing nonlinearity and matrix multiplication at every step like a plain RNN's hidden state. When the forget gate stays near 1, gradients can flow backward through the cell state pathway almost unchanged across long spans — this near-linear path is sometimes called the constant error carousel.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Does LSTM completely eliminate vanishing gradients?" — No, it mitigates it substantially but not perfectly; extremely long sequences can still be challenging, which is part of why attention/Transformers ultimately displaced RNNs for very long-range dependencies.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Walk through what each of the three LSTM gates does.</summary>
+        <div class="qa-body">
+          <p>The <strong>forget gate</strong> looks at the previous hidden state and current input and outputs a value between 0 and 1 per cell-state dimension, deciding how much of the old cell state to keep versus erase. The <strong>input gate</strong> decides how much of a newly computed candidate value to write into the cell state. The <strong>output gate</strong> decides how much of the (now updated) cell state to expose as the hidden state that gets passed forward and used for predictions.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Why sigmoid for the gates but tanh for the candidate values?" — sigmoid outputs values in [0,1], which naturally represents "how much to let through" (a gate); tanh outputs [-1,1], centered at zero, which is better suited for representing actual content/state values that can be positive or negative.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>What's the practical difference between LSTM and GRU, and which would you pick?</summary>
+        <div class="qa-body">
+          <p>GRU merges the cell and hidden states into one and uses 2 gates (reset, update) instead of LSTM's 3 (forget, input, output) and separate cell state — fewer parameters, faster training, less data required to train well. LSTM's extra cell state and gate give it more fine-grained control over memory, which can matter for longer sequences or larger datasets. In practice the performance gap is often small and task-dependent, so a reasonable answer is: start with GRU for speed/simplicity, and benchmark LSTM if you have the data and compute to justify it.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "How many total gates does an LSTM have, and how many weight matrices does that imply?" — 3 gates plus 1 candidate-value computation = 4 sets of weights, each taking the concatenated $[h_{t-1}, x_t]$ as input — this is part of why LSTM has roughly 4x the parameters of a plain RNN cell of the same hidden size.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>What is a bidirectional RNN/LSTM, and when would you use one?</summary>
+        <div class="qa-body">
+          <p>A bidirectional RNN runs two separate recurrent layers over the sequence — one left-to-right, one right-to-left — and concatenates (or otherwise combines) their hidden states at each position. This lets every timestep's representation incorporate context from both the past <em>and</em> the future. It's useful whenever the full sequence is available upfront (e.g. text classification, NER) but is not usable for real-time/streaming generation tasks, since it requires seeing the entire sequence before producing any output.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Why can't you use a bidirectional model for something like next-word prediction during generation?" — because generation is autoregressive: you don't have future tokens yet when predicting the next one, so there's no "future" context available to run the backward pass over.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>How do you handle exploding gradients in practice?</summary>
+        <div class="qa-body">
+          <p>The standard fix is <strong>gradient clipping</strong> — if the norm of the gradient exceeds some threshold, rescale it down to that threshold before applying the update. This caps how large a single weight update can be without changing the gradient's direction, preventing the wild instability that comes from occasional huge gradients while leaving normal training mostly unaffected.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Does gradient clipping help with vanishing gradients too?" — No, clipping only caps large gradients; it does nothing for gradients that are already near zero. Vanishing requires an architectural fix (LSTM/GRU, residual connections, better initialization), not clipping.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Why did Transformers largely replace RNNs/LSTMs for NLP?</summary>
+        <div class="qa-body">
+          <p>Two main reasons. First, RNNs process tokens strictly sequentially — you can't compute timestep 5 before timestep 4 — which makes training slow and prevents parallelization across the sequence dimension; Transformers process all tokens in parallel via attention. Second, even LSTM's improved gradient flow degrades over very long sequences, while self-attention gives every token a direct, single-hop connection to every other token regardless of distance, making long-range dependencies far easier to learn.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Are RNNs completely obsolete then?" — Not entirely: they remain relevant for streaming/low-latency settings (constant memory per step vs attention's quadratic cost), smaller datasets, and time-series tasks where the strict sequential inductive bias can actually help rather than hurt.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>What does "long-term dependency" mean in the context of RNNs, and give an example where it matters.</summary>
+        <div class="qa-body">
+          <p>It refers to a case where correctly predicting something at position $t$ requires information from far earlier in the sequence, past many intervening timesteps. Classic example: "The clouds in the sky, having drifted in from the coast overnight after a long and unusual storm, are ___" — predicting the missing word (e.g. "grey") requires connecting back to "clouds" many words earlier, well beyond where a plain RNN's gradient signal typically survives.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "How would you empirically test whether your model is actually using long-range context or just recent tokens?" — ablation: shuffle or mask distant tokens and see if performance degrades; if it doesn't change much, the model likely isn't using that long-range signal regardless of architecture.
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+    <h2>Video walkthrough</h2>
+    <div class="video-slot">
+      [ paste a YouTube embed or link here — e.g. &lt;iframe src="https://www.youtube.com/embed/VIDEO_ID"&gt;&lt;/iframe&gt; ]
+    </div>
+
     <div class="topic-footer-nav">
-      <a href="cnn.html">&larr; Previous</a>
-      <a href="attention-transformers.html">Next &rarr;</a>
+      <a href="cnn.html">← §13 Convolutional Neural Networks</a>
+      <a href="attention-transformers.html">§15 Attention & Transformers →</a>
     </div>
   </main>
 </div>
