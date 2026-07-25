@@ -15,103 +15,310 @@
   <main>
     <div class="eyebrow">§15 · Deep Learning</div>
     <h1 class="title">Attention &amp;<br><em>Transformers</em></h1>
-    <p class="subtitle">The single most-asked architecture right now. Everything downstream — BERT, GPT, your LangChain/Mistral project — is built on the mechanism explained here. We go word-by-word first, then the matrix math.</p>
+    <p class="subtitle">Built up the way Jay Alammar teaches it — start with the black box, unpack one layer at a time, watch a single word compute attention, then zoom out to matrices. Everything downstream (BERT, GPT, your Mistral chatbot) is this same mechanism.</p>
 
-    <h2>1. The black box, then opened up</h2>
-    <p>At the highest level, a Transformer takes an input sequence and produces an output sequence — translation, summarization, next-token prediction, all fit this shape. Opening the box: it's a stack of identical <strong>encoder</strong> blocks feeding a stack of identical <strong>decoder</strong> blocks (the original paper used 6 of each).</p>
+    <div class="callout">
+      <span class="callout-label">Companion reading</span>
+      This page is designed to be read alongside Jay Alammar's <a href="https://jalammar.github.io/illustrated-transformer/" target="_blank" rel="noopener">"The Illustrated Transformer"</a> — his visualizations are the gold standard. This page gives you original diagrams in the same teaching flow, plus the derivations and interview follow-ups his article intentionally skips.
+    </div>
+
+    <h2>1. The high-level view — a black box</h2>
+    <p>Start with the simplest possible picture: a Transformer is a function that takes a sequence in and produces a sequence out. For a translation model: <em>"Je suis étudiant"</em> goes in, <em>"I am a student"</em> comes out. Nothing more mysterious than that at the surface.</p>
 
     <figure class="diagram">
-      <svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Transformer encoder-decoder stack overview">
-        <text x="140" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">ENCODER STACK</text>
-        <rect x="60" y="35" width="160" height="34" rx="6" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.35)" stroke-width="1"/>
-        <rect x="60" y="73" width="160" height="34" rx="6" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.35)" stroke-width="1"/>
-        <rect x="60" y="111" width="160" height="34" rx="6" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
-        <text x="140" y="132" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Encoder N</text>
-        <text x="140" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">(× 6 stacked)</text>
-
-        <text x="500" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">DECODER STACK</text>
-        <rect x="420" y="35" width="160" height="34" rx="6" fill="rgba(242,180,65,0.08)" stroke="rgba(242,180,65,0.35)" stroke-width="1"/>
-        <rect x="420" y="73" width="160" height="34" rx="6" fill="rgba(242,180,65,0.08)" stroke="rgba(242,180,65,0.35)" stroke-width="1"/>
-        <rect x="420" y="111" width="160" height="34" rx="6" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.3"/>
-        <text x="500" y="132" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Decoder N</text>
-        <text x="500" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">(× 6 stacked)</text>
-
-        <line x1="220" y1="90" x2="415" y2="60" stroke="#5FD8E8" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arrow3)"/>
-        <text x="300" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#5FD8E8">K, V from encoder</text>
-
-        <text x="140" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">"The cat sat"</text>
-        <line x1="140" y1="195" x2="140" y2="146" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#arrow3)"/>
-        <text x="500" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">"Le chat" →</text>
-        <line x1="500" y1="195" x2="500" y2="146" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#arrow3)"/>
-
+      <svg viewBox="0 0 720 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Transformer as a black box mapping input sentence to output sentence">
+        <text x="30" y="65" font-family="JetBrains Mono" font-size="13" fill="#A9C2D1">"Je suis étudiant"</text>
+        <line x1="200" y1="60" x2="290" y2="60" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#a1)"/>
+        <rect x="290" y="30" width="150" height="60" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.4"/>
+        <text x="365" y="66" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">TRANSFORMER</text>
+        <line x1="440" y1="60" x2="530" y2="60" stroke="#F2B441" stroke-width="1.4" marker-end="url(#a2)"/>
+        <text x="545" y="65" font-family="JetBrains Mono" font-size="13" fill="#F2B441">"I am a student"</text>
         <defs>
-          <marker id="arrow3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/>
-          </marker>
+          <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker>
+          <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#F2B441"/></marker>
         </defs>
       </svg>
-      <figcaption>Encoders build a rich representation of the input. Each decoder layer attends to both what it's generated so far and the encoder's output (via K, V passed across) — this cross-connection is called encoder-decoder attention.</figcaption>
+      <figcaption>Every Transformer, from the original 2017 paper to GPT-4, is really just this function at the top level. The interesting engineering is what's inside the box.</figcaption>
     </figure>
 
-    <p>Each encoder block has exactly two sub-layers: <strong>self-attention</strong>, then a <strong>feed-forward network</strong>. Each decoder block has three: <strong>masked self-attention</strong>, <strong>encoder-decoder attention</strong>, then feed-forward. Every sub-layer is wrapped in a residual connection + layer normalization ("Add &amp; Norm") — more on why that matters in §4.</p>
+    <h2>2. Cracking it open — encoders and decoders</h2>
+    <p>Pop the lid: inside the black box is a stack of <strong>encoders</strong> on one side and a stack of <strong>decoders</strong> on the other. The original paper used 6 of each. All encoders have identical structure (though they don't share weights — each learns its own parameters); same for the decoders.</p>
 
-    <h2>2. Self-attention — the word-by-word intuition</h2>
-    <p>This is the core idea, and it's easiest to build up with one sentence: <em>"The animal didn't cross the street because it was too tired."</em> What does <strong>"it"</strong> refer to — the animal, or the street? Self-attention is the mechanism that lets the model figure this out: when processing the word "it", the model looks at every other word in the sentence and learns to weight "animal" heavily and "street" barely at all.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Encoder stack of six blocks feeding a decoder stack of six blocks">
+        <text x="140" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">ENCODERS</text>
+        <g>
+          <rect x="70" y="35" width="140" height="34" rx="6" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.35)" stroke-width="1"/>
+          <text x="140" y="57" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Encoder 6</text>
+          <rect x="70" y="76" width="140" height="34" rx="6" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.35)" stroke-width="1"/>
+          <text x="140" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Encoder 5</text>
+          <text x="140" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">...</text>
+          <rect x="70" y="145" width="140" height="34" rx="6" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.35)" stroke-width="1"/>
+          <text x="140" y="167" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Encoder 2</text>
+          <rect x="70" y="186" width="140" height="34" rx="6" fill="rgba(95,216,232,0.12)" stroke="#5FD8E8" stroke-width="1.3"/>
+          <text x="140" y="208" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Encoder 1</text>
+        </g>
+        <text x="140" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">↑</text>
+        <text x="140" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#A9C2D1">"Je suis étudiant"</text>
 
-    <p>To make this learnable, every word's embedding is projected into three separate vectors:</p>
+        <text x="500" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">DECODERS</text>
+        <g>
+          <rect x="430" y="35" width="140" height="34" rx="6" fill="rgba(242,180,65,0.08)" stroke="rgba(242,180,65,0.35)" stroke-width="1"/>
+          <text x="500" y="57" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Decoder 6</text>
+          <rect x="430" y="76" width="140" height="34" rx="6" fill="rgba(242,180,65,0.08)" stroke="rgba(242,180,65,0.35)" stroke-width="1"/>
+          <text x="500" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Decoder 5</text>
+          <text x="500" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">...</text>
+          <rect x="430" y="145" width="140" height="34" rx="6" fill="rgba(242,180,65,0.08)" stroke="rgba(242,180,65,0.35)" stroke-width="1"/>
+          <text x="500" y="167" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Decoder 2</text>
+          <rect x="430" y="186" width="140" height="34" rx="6" fill="rgba(242,180,65,0.12)" stroke="#F2B441" stroke-width="1.3"/>
+          <text x="500" y="208" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Decoder 1</text>
+        </g>
+        <text x="500" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">↓</text>
+        <text x="500" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#F2B441">"I am a student"</text>
+
+        <line x1="215" y1="52" x2="425" y2="52" stroke="#5FD8E8" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#a3)"/>
+        <text x="320" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#5FD8E8">encoder 6 → K,V into every decoder</text>
+        <line x1="215" y1="93" x2="425" y2="93" stroke="rgba(95,216,232,0.35)" stroke-width="1" stroke-dasharray="5 4"/>
+        <line x1="215" y1="203" x2="425" y2="203" stroke="rgba(95,216,232,0.35)" stroke-width="1" stroke-dasharray="5 4"/>
+
+        <text x="360" y="315" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">the encoder stack processes the input fully first; then the decoder stack generates output tokens one at a time</text>
+
+        <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5FD8E8"/></marker></defs>
+      </svg>
+      <figcaption>Six encoders stacked; six decoders stacked. The top encoder's output feeds into every decoder as Keys and Values (§7).</figcaption>
+    </figure>
+
+    <h2>3. Inside one encoder — two sub-layers</h2>
+    <p>Every encoder is exactly two things stacked: a <strong>self-attention</strong> layer, then a <strong>feed-forward neural network</strong>. The input to the encoder flows through self-attention first (letting each word look at every other word in the sentence to build context), then through the feed-forward network (applied independently to each position).</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of a single encoder block with self-attention and feed-forward sub-layers">
+        <rect x="150" y="30" width="420" height="260" rx="10" fill="rgba(95,216,232,0.04)" stroke="rgba(95,216,232,0.3)" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="360" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">ENCODER BLOCK</text>
+
+        <rect x="200" y="180" width="320" height="60" rx="8" fill="rgba(95,216,232,0.12)" stroke="#5FD8E8" stroke-width="1.4"/>
+        <text x="360" y="205" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#E8F1F5">Self-Attention</text>
+        <text x="360" y="225" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">each word looks at every other word</text>
+
+        <line x1="360" y1="180" x2="360" y2="150" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#a4)"/>
+        <rect x="200" y="80" width="320" height="60" rx="8" fill="rgba(242,180,65,0.12)" stroke="#F2B441" stroke-width="1.4"/>
+        <text x="360" y="105" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#E8F1F5">Feed-Forward Network</text>
+        <text x="360" y="125" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">applied to each position independently</text>
+
+        <line x1="360" y1="80" x2="360" y2="50" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#a4)"/>
+        <text x="360" y="20" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">output to next encoder</text>
+
+        <line x1="360" y1="290" x2="360" y2="260" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#a4)"/>
+        <text x="360" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">input from previous encoder (or embeddings)</text>
+
+        <defs><marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker></defs>
+      </svg>
+      <figcaption>An encoder is two sub-layers, plain and simple. Decoders add a third sub-layer between these two (encoder-decoder attention, §7). Every sub-layer is wrapped in a residual connection + LayerNorm, added in §8.</figcaption>
+    </figure>
+
+    <h2>4. Bringing tensors into the picture — embeddings flow through</h2>
+    <p>Now let's track what actually flows between layers. Words are first turned into vectors ("embeddings") of some fixed dimension — the paper used 512. A crucial property of the encoder: <strong>each position gets its own vector, and these vectors flow through the encoder in parallel</strong>. Word 1's vector goes through its own path, word 2's through its own, and so on — the only place they interact is inside self-attention.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Word embeddings flowing in parallel paths through self-attention where they interact then feed-forward independently">
+        <text x="30" y="24" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">3 words, each a vector of length 512</text>
+
+        <text x="100" y="60" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#5FD8E8">Je</text>
+        <rect x="70" y="70" width="60" height="18" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1"/>
+        <text x="300" y="60" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#5FD8E8">suis</text>
+        <rect x="270" y="70" width="60" height="18" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1"/>
+        <text x="500" y="60" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#5FD8E8">étudiant</text>
+        <rect x="470" y="70" width="60" height="18" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1"/>
+
+        <line x1="100" y1="88" x2="100" y2="110" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="300" y1="88" x2="300" y2="110" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="500" y1="88" x2="500" y2="110" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a5)"/>
+
+        <rect x="40" y="115" width="620" height="42" rx="7" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.4"/>
+        <text x="350" y="141" text-anchor="middle" font-family="Space Grotesk" font-size="13" font-weight="600" fill="#E8F1F5">Self-Attention — the vectors interact here</text>
+
+        <line x1="100" y1="157" x2="100" y2="185" stroke="#F2B441" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="300" y1="157" x2="300" y2="185" stroke="#F2B441" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="500" y1="157" x2="500" y2="185" stroke="#F2B441" stroke-width="1.2" marker-end="url(#a5)"/>
+
+        <rect x="70" y="190" width="60" height="30" rx="4" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1"/>
+        <text x="100" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#F2B441">FFN</text>
+        <rect x="270" y="190" width="60" height="30" rx="4" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1"/>
+        <text x="300" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#F2B441">FFN</text>
+        <rect x="470" y="190" width="60" height="30" rx="4" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1"/>
+        <text x="500" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#F2B441">FFN</text>
+        <text x="350" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">same FFN weights applied per position, no interaction</text>
+        <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker></defs>
+      </svg>
+      <figcaption>Self-attention is the one place where the paths cross — where each position's vector gets to look at other positions. In the feed-forward layer, each position is processed independently (the same FFN weights are applied to each, but the computations don't interact).</figcaption>
+    </figure>
+
+    <h2>5. Self-attention — the "it" example, word by word</h2>
+    <p>This is the heart of the whole architecture, so let's build it up slowly with the classic example: <em>"The animal didn't cross the street because it was too tired."</em></p>
+    <p>As a human, you know instantly that <strong>"it"</strong> refers to <em>the animal</em>, not <em>the street</em>. But how would a neural network figure that out? When the model processes the word "it", self-attention lets it associate "it" with "animal" — by looking at every other word in the sentence and figuring out which are most relevant to understanding "it" in this context. This is what "attention" means: as the encoder processes any given word, it can peek at other positions for clues that help build a better representation of the current one.</p>
+
+    <div class="callout">
+      <span class="callout-label">The intuition in one sentence</span>
+      Self-attention is the mechanism that lets each word's representation be a <em>weighted blend</em> of every other word's representation — with the blend weights <em>learned</em>, so the model figures out on its own that when processing "it", it should heavily blend in information from "animal".
+    </div>
+
+    <h3>Step 1: Create Query, Key, Value vectors</h3>
+    <p>For each word's embedding, we create three new vectors: a <strong>Query</strong>, a <strong>Key</strong>, and a <strong>Value</strong>. These are created by multiplying the embedding by three <em>learned</em> weight matrices — $W^Q, W^K, W^V$ — that are trained along with the rest of the model. In the paper, if embeddings are 512-dimensional, Q/K/V are each 64-dimensional (smaller, because we'll have multiple attention heads later; §6).</p>
+
+    <p>The three vectors have different jobs, and the names hint at a database-lookup analogy:</p>
     <ul>
-      <li><strong>Query (Q)</strong> — "what am I looking for?" — a representation of the current word used to search other words</li>
-      <li><strong>Key (K)</strong> — "what do I contain?" — a representation of each word used to be matched against a query</li>
-      <li><strong>Value (V)</strong> — "what do I actually offer?" — the content that gets pulled forward once a match is found</li>
+      <li><strong>Query (q)</strong> — "what am I looking for?" — a representation of the current word used to <em>search</em> other words.</li>
+      <li><strong>Key (k)</strong> — "what do I contain, in searchable form?" — used to be <em>matched against</em> incoming queries.</li>
+      <li><strong>Value (v)</strong> — "what content will I actually contribute if matched?" — the payload delivered to whoever attends to me.</li>
     </ul>
-    <p>These come from three learned weight matrices ($W^Q, W^K, W^V$) applied to the same input embedding — so Q, K, and V for a word all start from the same place but are projected differently for different purposes.</p>
 
     <figure class="diagram">
-      <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Step by step self-attention calculation for the word it attending to animal and street">
-        <text x="20" y="24" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP 1 — project each word into Q, K, V</text>
-        <text x="30" y="55" font-family="Space Grotesk" font-size="13" fill="#5FD8E8">animal</text>
-        <text x="120" y="55" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">q₁ k₁ v₁</text>
-        <text x="30" y="80" font-family="Space Grotesk" font-size="13" fill="#5FD8E8">street</text>
-        <text x="120" y="80" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">q₂ k₂ v₂</text>
-        <text x="30" y="105" font-family="Space Grotesk" font-size="13" fill="#F2B441">it</text>
-        <text x="120" y="105" font-family="JetBrains Mono" font-size="11" fill="#F2B441">q₃ k₃ v₃</text>
+      <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Projecting an embedding into query key and value vectors via three learned weight matrices">
+        <rect x="40" y="90" width="90" height="30" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="85" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">x₁ (Je)</text>
+        <text x="85" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#6E8799">embedding</text>
 
-        <text x="20" y="140" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP 2 — score: query("it") · key(each word)</text>
-        <rect x="30" y="150" width="150" height="26" rx="5" fill="rgba(95,216,232,0.08)" stroke="rgba(95,216,232,0.3)"/>
-        <text x="45" y="167" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">q₃·k₁ = 112 (animal)</text>
-        <rect x="200" y="150" width="150" height="26" rx="5" fill="rgba(120,190,225,0.05)" stroke="rgba(120,190,225,0.2)"/>
-        <text x="215" y="167" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">q₃·k₂ = 14 (street)</text>
+        <line x1="130" y1="95" x2="230" y2="45" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
+        <line x1="130" y1="105" x2="230" y2="105" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
+        <line x1="130" y1="115" x2="230" y2="165" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
 
-        <text x="20" y="205" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP 3 — scale by √dₖ, softmax → attention weights</text>
-        <rect x="30" y="215" width="300" height="20" rx="10" fill="rgba(120,190,225,0.08)"/>
-        <rect x="30" y="215" width="264" height="20" rx="10" fill="#5FD8E8"/>
-        <text x="34" y="229" font-family="JetBrains Mono" font-size="10" fill="#0B1725">animal: 0.88</text>
-        <text x="300" y="252" font-family="JetBrains Mono" font-size="10" fill="#A9C2D1">street: 0.12</text>
+        <rect x="235" y="30" width="120" height="30" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="295" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">× Wᴼ (learned)</text>
+        <rect x="235" y="90" width="120" height="30" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="295" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">× Wᴷ (learned)</text>
+        <rect x="235" y="150" width="120" height="30" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="295" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">× Wⱽ (learned)</text>
 
-        <text x="20" y="265" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP 4 — weighted sum of V → output vector for "it"</text>
-        <text x="380" y="105" font-family="JetBrains Mono" font-size="12" fill="#F2B441">z₃ = 0.88·v₁ + 0.12·v₂ + ...</text>
-        <line x1="200" y1="55" x2="375" y2="100" stroke="#5FD8E8" stroke-width="1.6" marker-end="url(#arrow4)"/>
-        <line x1="200" y1="80" x2="375" y2="103" stroke="rgba(120,190,225,0.3)" stroke-width="1" marker-end="url(#arrow4)"/>
+        <line x1="355" y1="45" x2="440" y2="45" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
+        <line x1="355" y1="105" x2="440" y2="105" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
+        <line x1="355" y1="165" x2="440" y2="165" stroke="#A9C2D1" stroke-width="1.2" marker-end="url(#a6)"/>
 
-        <defs>
-          <marker id="arrow4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="#5FD8E8"/>
-          </marker>
-        </defs>
+        <rect x="445" y="30" width="90" height="30" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="490" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">q₁ (query)</text>
+        <rect x="445" y="90" width="90" height="30" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="490" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">k₁ (key)</text>
+        <rect x="445" y="150" width="90" height="30" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="490" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">v₁ (value)</text>
+
+        <text x="590" y="50" font-family="JetBrains Mono" font-size="10" fill="#6E8799">dim 64</text>
+        <text x="590" y="110" font-family="JetBrains Mono" font-size="10" fill="#6E8799">dim 64</text>
+        <text x="590" y="170" font-family="JetBrains Mono" font-size="10" fill="#6E8799">dim 64</text>
+
+        <defs><marker id="a6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker></defs>
       </svg>
-      <figcaption>Processing the word "it": its query is scored against every word's key, those scores become weights via softmax, and the output is a weighted blend of every word's value — dominated here by "animal".</figcaption>
+      <figcaption>One embedding × three separate learned matrices = three smaller vectors. Every word in the input goes through this same projection, using the same three W matrices (weight sharing across positions).</figcaption>
     </figure>
+
+    <h3>Step 2: Score each pair of words</h3>
+    <p>Say we're computing self-attention for the first word, "Je". We need to score every word in the input against this word — the score tells us how much focus to place on other words when encoding "Je". The score is calculated as the <strong>dot product of the query vector with the key vector of the word we're scoring against</strong>.</p>
+
+    <p>So the scores when processing "Je" are: $q_1 \cdot k_1$, $q_1 \cdot k_2$, $q_1 \cdot k_3$, and so on. High dot product = high alignment = "these words are relevant to each other."</p>
+
+    <h3>Step 3: Scale by √dₖ, then softmax</h3>
+    <p>Divide each score by $\sqrt{d_k}$ (where $d_k$ = key dimension, 64 in the paper, so $\sqrt{d_k} = 8$). This is a crucial detail — without it, dot products grow large in magnitude as dimensionality increases, which pushes softmax into a regime where its outputs become nearly one-hot and its gradients nearly zero. Scaling by $\sqrt{d_k}$ keeps values in a range where softmax stays well-behaved and gradients continue flowing.</p>
+
+    <p>Then pass the scaled scores through softmax. This normalizes them so they're all positive and sum to 1 — these are our <strong>attention weights</strong>.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Attention score calculation shown as bar chart from raw scores through scaling and softmax">
+        <text x="30" y="24" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">processing "it" — scoring against every other word</text>
+
+        <text x="60" y="60" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">animal</text>
+        <text x="60" y="90" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">didn't</text>
+        <text x="60" y="120" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">cross</text>
+        <text x="60" y="150" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">the</text>
+        <text x="60" y="180" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">street</text>
+        <text x="60" y="210" font-family="Space Grotesk" font-size="12" fill="#A9C2D1">tired</text>
+
+        <text x="180" y="30" font-family="JetBrains Mono" font-size="10" fill="#6E8799">raw q·k</text>
+        <rect x="150" y="50" width="112" height="14" fill="#5FD8E8"/><text x="270" y="61" font-family="JetBrains Mono" font-size="10.5" fill="#5FD8E8">112</text>
+        <rect x="150" y="80" width="18" height="14" fill="rgba(120,190,225,0.4)"/><text x="270" y="91" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">18</text>
+        <rect x="150" y="110" width="22" height="14" fill="rgba(120,190,225,0.4)"/><text x="270" y="121" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">22</text>
+        <rect x="150" y="140" width="8" height="14" fill="rgba(120,190,225,0.4)"/><text x="270" y="151" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">8</text>
+        <rect x="150" y="170" width="14" height="14" fill="rgba(120,190,225,0.4)"/><text x="270" y="181" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">14</text>
+        <rect x="150" y="200" width="40" height="14" fill="rgba(120,190,225,0.4)"/><text x="270" y="211" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">40</text>
+
+        <text x="360" y="30" font-family="JetBrains Mono" font-size="10" fill="#6E8799">÷ √dₖ (÷8)</text>
+        <text x="360" y="61" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">14.0</text>
+        <text x="360" y="91" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">2.25</text>
+        <text x="360" y="121" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">2.75</text>
+        <text x="360" y="151" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">1.0</text>
+        <text x="360" y="181" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">1.75</text>
+        <text x="360" y="211" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">5.0</text>
+
+        <text x="500" y="30" font-family="JetBrains Mono" font-size="10" fill="#6E8799">after softmax</text>
+        <rect x="480" y="50" width="180" height="14" fill="#F2B441"/><text x="670" y="61" font-family="JetBrains Mono" font-size="10.5" fill="#F2B441">0.72</text>
+        <rect x="480" y="80" width="4" height="14" fill="rgba(242,180,65,0.4)"/><text x="670" y="91" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">0.01</text>
+        <rect x="480" y="110" width="6" height="14" fill="rgba(242,180,65,0.4)"/><text x="670" y="121" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">0.02</text>
+        <rect x="480" y="140" width="2" height="14" fill="rgba(242,180,65,0.4)"/><text x="670" y="151" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">0.00</text>
+        <rect x="480" y="170" width="3" height="14" fill="rgba(242,180,65,0.4)"/><text x="670" y="181" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">0.01</text>
+        <rect x="480" y="200" width="60" height="14" fill="rgba(242,180,65,0.7)"/><text x="670" y="211" font-family="JetBrains Mono" font-size="10.5" fill="#F2B441">0.24</text>
+      </svg>
+      <figcaption>Raw dot products (illustrative numbers) → scaled by √dₖ → softmax. The result: 72% attention on "animal", 24% on "tired", nearly zero on everything else — exactly what we'd want the model to learn.</figcaption>
+    </figure>
+
+    <h3>Step 4: Multiply values by weights, then sum</h3>
+    <p>Multiply each word's <em>value</em> vector by that word's attention weight. Then sum all the weighted value vectors. The result — a single vector, same shape as any of the values — is the self-attention output for the position we were processing ("it"). This output is dominated by content from "animal" (weight 0.72) with a smaller contribution from "tired" (0.24), and essentially nothing from the rest.</p>
 
     <div class="formula-box">
-      <div class="fb-label">Scaled dot-product attention (the full matrix form)</div>
+      <div class="fb-label">The four steps, as one formula (scaled dot-product attention)</div>
+      $$ z_i = \sum_j \left[\text{softmax}\left(\frac{q_i \cdot k_j}{\sqrt{d_k}}\right)\right] v_j $$
+      <div class="fb-label" style="margin-top:16px;">And all at once, in matrix form</div>
       $$ \text{Attention}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V $$
     </div>
 
-    <h3>Why divide by √dₖ?</h3>
-    <p>As the dimension $d_k$ of the key vectors grows, dot products $Q \cdot K$ tend to grow large in magnitude purely from summing more terms. Large values pushed into softmax produce an extremely peaked, near one-hot distribution — gradients through softmax in that regime become tiny, stalling learning. Scaling by $\sqrt{d_k}$ keeps the dot products in a reasonable range so softmax stays well-behaved and gradients flow properly.</p>
+    <p>The reason it's usually written in matrix form is efficiency: rather than computing one word at a time, we stack all embeddings into a matrix $X$, project them all at once ($Q = XW^Q$, $K = XW^K$, $V = XW^V$), and compute all attention outputs in a single matrix multiplication. This is exactly why Transformers are so much faster to train than RNNs — the entire sequence's attention can be computed in parallel on a GPU.</p>
 
-    <h2>3. Multi-head attention</h2>
-    <p>One attention computation lets the model focus on one kind of relationship at a time. But language has many simultaneous relationships — "it" resolving to "animal" is a coreference relationship; "tired" relating back to "animal" is a different, semantic one. <strong>Multi-head attention</strong> runs several attention computations in parallel, each with its own learned $W^Q, W^K, W^V$, so different heads can specialize in different relationship types — then concatenates all the results and projects back down.</p>
+    <h2>6. Multi-head attention — many attentions in parallel</h2>
+    <p>The paper improves this basic mechanism by adding <strong>multiple attention heads</strong>. Instead of one attention computation, do it several times in parallel — each with its own separate $W^Q, W^K, W^V$ matrices. The original paper used 8 heads.</p>
+
+    <p>Why? Because one attention layer computes a single weighted average, which forces it to average across all the different types of relationships in language (coreference, syntax, semantics, ...) into one blend. Multiple heads let the model attend to different relationship types simultaneously — head 1 might specialize in tracking coreference ("it → animal"), while head 3 tracks the subject-verb relationship, etc.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Multiple attention heads run in parallel with different weight matrices then concatenated and projected">
+        <text x="30" y="24" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP A — same input goes into 8 heads, each with its own Wᴼ, Wᴷ, Wⱽ</text>
+
+        <rect x="30" y="45" width="90" height="30" rx="5" fill="rgba(95,216,232,0.12)" stroke="#5FD8E8" stroke-width="1.2"/>
+        <text x="75" y="65" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">head 1 → z₁</text>
+        <rect x="30" y="80" width="90" height="30" rx="5" fill="rgba(242,180,65,0.12)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="75" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">head 2 → z₂</text>
+        <rect x="30" y="115" width="90" height="30" rx="5" fill="rgba(255,122,92,0.12)" stroke="#FF7A5C" stroke-width="1.2"/>
+        <text x="75" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#FF7A5C">head 3 → z₃</text>
+        <text x="75" y="165" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">...</text>
+        <rect x="30" y="180" width="90" height="30" rx="5" fill="rgba(120,190,225,0.1)" stroke="rgba(120,190,225,0.4)" stroke-width="1.2"/>
+        <text x="75" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">head 8 → z₈</text>
+
+        <text x="200" y="35" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP B — concatenate</text>
+        <rect x="180" y="45" width="180" height="165" rx="6" fill="rgba(120,190,225,0.05)" stroke="rgba(120,190,225,0.35)" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <rect x="195" y="60" width="150" height="16" fill="rgba(95,216,232,0.15)"/>
+        <text x="270" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#5FD8E8">z₁</text>
+        <rect x="195" y="80" width="150" height="16" fill="rgba(242,180,65,0.15)"/>
+        <text x="270" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#F2B441">z₂</text>
+        <rect x="195" y="100" width="150" height="16" fill="rgba(255,122,92,0.15)"/>
+        <text x="270" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#FF7A5C">z₃</text>
+        <rect x="195" y="120" width="150" height="16" fill="rgba(120,190,225,0.15)"/>
+        <text x="270" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#A9C2D1">...</text>
+        <rect x="195" y="140" width="150" height="16" fill="rgba(120,190,225,0.15)"/>
+        <text x="270" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#A9C2D1">z₈</text>
+        <text x="270" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">8 × 64 = 512 dims</text>
+
+        <line x1="360" y1="125" x2="410" y2="125" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#a7)"/>
+        <text x="440" y="35" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">STEP C — project</text>
+        <rect x="420" y="50" width="130" height="140" rx="6" fill="rgba(242,180,65,0.08)" stroke="#F2B441" stroke-width="1.2"/>
+        <text x="485" y="115" text-anchor="middle" font-family="Space Grotesk" font-size="13" fill="#E8F1F5">× Wᴼ</text>
+        <text x="485" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#A9C2D1">(learned output projection)</text>
+
+        <line x1="550" y1="125" x2="600" y2="125" stroke="#F2B441" stroke-width="1.4" marker-end="url(#a8)"/>
+        <rect x="605" y="105" width="90" height="40" rx="5" fill="rgba(242,180,65,0.15)" stroke="#F2B441" stroke-width="1.3"/>
+        <text x="650" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">final Z</text>
+
+        <defs>
+          <marker id="a7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker>
+          <marker id="a8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#F2B441"/></marker>
+        </defs>
+      </svg>
+      <figcaption>Each head produces its own Z output. Concatenate all of them, then multiply by an output weight matrix $W^O$ to project back down to the model's expected dimension. Result: one final Z per word, the output of multi-head attention.</figcaption>
+    </figure>
 
     <div class="formula-box">
       <div class="fb-label">Multi-head attention</div>
@@ -119,47 +326,34 @@
       $$ \text{head}_i = \text{Attention}(QW_i^Q,\ KW_i^K,\ VW_i^V) $$
     </div>
 
-    <figure class="diagram">
-      <svg viewBox="0 0 720 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Multiple attention heads run in parallel then concatenated">
-        <rect x="30" y="20" width="120" height="50" rx="7" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.2"/>
-        <text x="90" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">head 1</text>
-        <rect x="30" y="80" width="120" height="50" rx="7" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.2"/>
-        <text x="90" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">head 2</text>
-        <text x="90" y="155" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6E8799">... head h</text>
+    <h2>7. Positional encoding — injecting order</h2>
+    <p>Notice: nothing in what we've built so far cares about word <em>order</em>. If you shuffled the input words, self-attention would produce the same set of outputs, just reordered. But of course, order matters — "dog bites man" and "man bites dog" mean very different things.</p>
 
-        <line x1="150" y1="45" x2="290" y2="75" stroke="#5FD8E8" stroke-width="1.3" marker-end="url(#arrow5)"/>
-        <line x1="150" y1="105" x2="290" y2="80" stroke="#F2B441" stroke-width="1.3" marker-end="url(#arrow5)"/>
-
-        <rect x="300" y="55" width="130" height="45" rx="7" fill="rgba(120,190,225,0.06)" stroke="rgba(120,190,225,0.3)" stroke-width="1.2"/>
-        <text x="365" y="82" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Concat</text>
-
-        <line x1="430" y1="78" x2="500" y2="78" stroke="#A9C2D1" stroke-width="1.3" marker-end="url(#arrow5)"/>
-        <rect x="510" y="55" width="130" height="45" rx="7" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.2"/>
-        <text x="575" y="82" text-anchor="middle" font-family="Space Grotesk" font-size="12" fill="#E8F1F5">Linear Wᴼ</text>
-
-        <defs><marker id="arrow5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker></defs>
-      </svg>
-      <figcaption>The original paper used 8 heads, each with dimension 64 (so 8 × 64 = 512, matching the model's embedding size). Each head learns to attend to different types of relationships.</figcaption>
-    </figure>
-
-    <h2>4. Positional encoding — injecting word order</h2>
-    <p>Self-attention has no inherent sense of sequence order — it treats the input as a set, computing the same attention regardless of word position. But order obviously matters ("dog bites man" ≠ "man bites dog"). The fix: add a <strong>positional encoding</strong> vector to each word's embedding before it enters the encoder, using fixed sine and cosine functions at different frequencies.</p>
+    <p>The fix: add a <strong>positional encoding</strong> vector to each word's embedding before the first encoder. These vectors use fixed patterns of sine and cosine functions at different frequencies, so every position gets a unique "fingerprint" that the model can use to figure out where each word sits.</p>
 
     <div class="formula-box">
       <div class="fb-label">Sinusoidal positional encoding</div>
       $$ PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right) $$
       $$ PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right) $$
     </div>
-    <p>Different dimensions of the encoding oscillate at different frequencies — low dimensions change quickly with position, high dimensions change slowly — giving every position a unique "fingerprint" while keeping the encoding bounded and allowing the model to generalize to sequence lengths not seen during training (since sine/cosine functions are well-defined at any position).</p>
+    <p>Why sinusoids specifically? Two reasons: they're bounded (so they don't blow up for long sequences the way raw position numbers would), and the specific math means $PE_{pos+k}$ can be expressed as a linear function of $PE_{pos}$ — which makes it easy for the model to learn to attend by <em>relative</em> position, not just absolute.</p>
 
-    <h2>5. Residual connections &amp; layer normalization</h2>
-    <p>Every sub-layer's output is combined as $\text{LayerNorm}(x + \text{Sublayer}(x))$ — the input skips around the sub-layer and is added back before normalizing. The residual connection gives gradients a direct path backward through the entire stack (the same motivation as ResNet in CNNs), which is essential for training networks this deep. Layer normalization (normalizing across the feature dimension, per example) stabilizes training — Transformers use LayerNorm rather than BatchNorm because it doesn't depend on batch statistics, which matters for variable-length sequences and small batch sizes.</p>
+    <h2>8. Residual connections + Layer Normalization</h2>
+    <p>Each sub-layer (both self-attention and the FFN) is wrapped with a residual connection and layer normalization: the sub-layer's output is <em>added</em> to its own input, then normalized:</p>
+    <div class="formula-box">
+      $$ \text{output} = \text{LayerNorm}(x + \text{Sublayer}(x)) $$
+    </div>
+    <p>The residual connection gives gradients a direct highway to flow backward through the entire stack — same idea that makes ResNet trainable. LayerNorm (as opposed to BatchNorm) is chosen because it normalizes across the feature dimension per example, not across the batch, so it's insensitive to batch size and to variable sequence lengths — both crucial for NLP.</p>
 
-    <h2>6. The decoder's extra piece: masked self-attention</h2>
-    <p>The decoder can't be allowed to "cheat" by looking at future tokens it hasn't generated yet. So its self-attention layer applies a <strong>mask</strong> — setting attention scores for all future positions to $-\infty$ before the softmax, so they become exactly 0 after softmax. This forces each position to only attend to itself and earlier positions, matching how generation actually happens one token at a time at inference.</p>
+    <h2>9. The decoder side</h2>
+    <p>Decoders are similar to encoders, with two differences:</p>
+    <ol>
+      <li>They have an extra sub-layer in the middle: <strong>encoder-decoder attention</strong>. This is a normal attention layer, except its Queries come from the decoder's current state while its Keys and Values come from the top encoder's output. This is the mechanism by which the decoder decides which parts of the input sentence to focus on when generating each output word.</li>
+      <li>The decoder's own self-attention is <strong>masked</strong>: when computing attention for position $t$, all positions later than $t$ have their scores set to $-\infty$ before softmax (so they end up with attention weight exactly 0). This prevents the decoder from cheating by looking at future tokens it hasn't generated yet — essential because at inference, those tokens genuinely don't exist yet.</li>
+    </ol>
 
-    <h2>7. Final output</h2>
-    <p>After the last decoder block, a final linear layer projects the output into a vector the size of the vocabulary, and softmax converts that into a probability distribution over every possible next token — the model then picks (or samples) the highest-probability token as its output.</p>
+    <h2>10. Final linear + softmax layer</h2>
+    <p>After the decoder stack produces its output vector for the current position, one final linear layer projects it into a much larger vector — one entry per word in the vocabulary. Softmax turns that into a probability distribution over the vocabulary. The output word is the argmax (greedy decoding) or a sample from the distribution (temperature-based sampling used in modern LLMs).</p>
 
     <h2>Interview Q&amp;A</h2>
     <div class="qa-section">
@@ -167,10 +361,10 @@
       <details class="qa-item">
         <summary>Walk through self-attention step by step, using the Query/Key/Value framing.</summary>
         <div class="qa-body">
-          <p>Every word's embedding is projected into a Query, Key, and Value vector using three learned weight matrices. To compute the output for a given word, take the dot product of its Query with every word's Key (including its own) — this gives a raw similarity score per word. Scale these scores by $\sqrt{d_k}$, pass them through softmax to get attention weights that sum to 1, then take the weighted sum of every word's Value vector using those weights. The result is a new representation of the word that's been enriched with relevant context from the rest of the sequence.</p>
+          <p>For each word's embedding, project it into three vectors — Query, Key, and Value — using three learned weight matrices. To compute the output for a given word, take the dot product of its Query with every word's Key (itself included), giving a raw similarity score per word. Scale these scores by $\sqrt{d_k}$, pass them through softmax to get attention weights summing to 1, then take the weighted sum of every word's Value vector using those weights. The result is a new representation of the word that has absorbed relevant context from across the sequence.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Why do we need three separate projections (Q, K, V) instead of just using the raw embeddings directly?" — separate learned projections let the model decouple "what I'm looking for" from "what I contain" from "what I actually pass along" — using the same vector for all three would tightly couple these roles and limit what the model can learn to represent.
+            "Why three separate projections instead of using the raw embedding as Q, K, and V?" — because the three projections let the model learn to represent "what I'm searching for" separately from "how I'll be found" separately from "what content I'll contribute" — using one shared vector for all three would tightly couple these roles and constrain what the model can learn.
           </div>
         </div>
       </details>
@@ -178,21 +372,21 @@
       <details class="qa-item">
         <summary>Why scale the dot product by √dₖ before softmax?</summary>
         <div class="qa-body">
-          <p>As the key dimension $d_k$ grows, dot products between Q and K vectors tend to have larger magnitude purely because you're summing more terms. Large inputs to softmax produce an extremely peaked, near-one-hot output distribution, and the gradient of softmax in that saturated regime is very small — this stalls learning. Dividing by $\sqrt{d_k}$ counteracts this growth and keeps the softmax input in a range where gradients remain useful.</p>
+          <p>As the key dimension $d_k$ grows, dot products between Q and K vectors grow in magnitude, since you're summing more terms. Large inputs to softmax produce a peaked, near one-hot distribution, and the gradient of softmax in that saturated regime is tiny — this stalls learning. Dividing by $\sqrt{d_k}$ keeps the softmax input in a range where gradients remain useful.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Why specifically √dₖ and not dₖ itself?" — assuming Q and K components are roughly independent with unit variance, the variance of their dot product scales with $d_k$, so dividing by its square root normalizes the variance back to approximately 1.
+            "Why specifically √dₖ, not dₖ or some other function?" — if you assume Q and K components are independent with roughly unit variance, the variance of their dot product scales with $d_k$; dividing by its square root normalizes the variance back to approximately 1.
           </div>
         </div>
       </details>
 
       <details class="qa-item">
-        <summary>Why use multiple attention heads instead of one large attention computation?</summary>
+        <summary>Why use multiple attention heads instead of one bigger attention?</summary>
         <div class="qa-body">
-          <p>A single attention head computes one weighted average over the sequence, which forces it to average across potentially very different types of relationships (syntactic, coreference, semantic) into one representation. Multiple heads, each with independently learned Q/K/V projections, let the model attend to different relationship types in parallel — one head might specialize in tracking pronoun references, another in local syntax — and concatenating them preserves this diversity instead of collapsing it into a single average.</p>
+          <p>A single attention head is one weighted average over the sequence — so it has to compress all types of relationships (coreference, syntax, semantic similarity) into one blend. Multiple heads with independent Q/K/V projections let the model attend to several relationship types in parallel — one head might specialize in tracking pronoun references, another in subject-verb agreement — and concatenating them preserves that diversity instead of averaging it away.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Does adding more heads always help?" — no, there are diminishing (and eventually negative) returns; too many heads with too little dimension each can undermine any single head's ability to represent a relationship well, and it's an empirical hyperparameter tuned per model.
+            "Does more heads always help?" — no, there are diminishing and eventually negative returns; too many heads with too little per-head dimension undermines any single head's ability to represent a relationship. It's an empirical hyperparameter.
           </div>
         </div>
       </details>
@@ -200,10 +394,10 @@
       <details class="qa-item">
         <summary>Why do Transformers need positional encoding at all?</summary>
         <div class="qa-body">
-          <p>Self-attention computes a weighted sum over the whole sequence with no built-in notion of order — mathematically, shuffling the input words would produce the same set of attention outputs just reordered, meaning the model can't natively distinguish "dog bites man" from "man bites dog". Positional encoding solves this by adding a unique, order-dependent vector to each token's embedding before the first layer, giving the model information about relative and absolute position that it can then use however it learns is useful.</p>
+          <p>Self-attention treats its input as a set, not a sequence — shuffling the input positions just reorders the outputs, without changing them meaningfully. So the model has no natural way to know that "dog bites man" is different from "man bites dog". Positional encoding adds a unique, order-dependent vector to each token's embedding before the first layer, giving the model information about position that it can then use however it learns to.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Why sine and cosine functions specifically, instead of just using the raw position number?" — sinusoids are bounded (won't blow up for long sequences the way a raw large position number would), and their specific mathematical structure allows the model to easily learn to attend by relative position, since $PE_{pos+k}$ can be expressed as a linear function of $PE_{pos}$.
+            "Why sine/cosine instead of just adding position numbers?" — sinusoids are bounded (won't blow up for long sequences), and their structure means $PE_{pos+k}$ is a linear function of $PE_{pos}$, which makes it easy for the model to learn attention over relative positions, not just absolute ones.
           </div>
         </div>
       </details>
@@ -211,10 +405,10 @@
       <details class="qa-item">
         <summary>What's the purpose of masking in the decoder's self-attention?</summary>
         <div class="qa-body">
-          <p>At inference, the decoder generates tokens one at a time and genuinely cannot see future tokens — they don't exist yet. To train consistently with how the model will actually be used, masked self-attention sets the attention scores for all future positions to $-\infty$ before softmax (making their weight exactly 0 after softmax), forcing each position to only attend to itself and earlier positions. Without this mask, the model would learn to "cheat" during training by peeking at the answer, and would fail catastrophically at real generation time.</p>
+          <p>At inference, the decoder generates one token at a time and genuinely doesn't have access to future tokens. To keep training consistent with inference, the decoder's self-attention masks out future positions by setting their scores to $-\infty$ before softmax (making their attention weight exactly 0 after). Without this mask, the model would learn to "cheat" during training by peeking at answers and fail catastrophically at real generation time.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Is this the same reason BERT doesn't use this mask?" — right, BERT is trained on masked language modeling (predicting randomly masked tokens using full bidirectional context), not autoregressive generation, so it deliberately uses unmasked, bidirectional self-attention across the whole input instead.
+            "Is this why BERT doesn't use this mask?" — right; BERT is trained on masked language modeling (predicting randomly masked tokens with full bidirectional context), not autoregressive generation, so it uses unmasked bidirectional self-attention over the entire input instead.
           </div>
         </div>
       </details>
@@ -222,52 +416,58 @@
       <details class="qa-item">
         <summary>What is encoder-decoder attention, and how does it differ from self-attention?</summary>
         <div class="qa-body">
-          <p>In self-attention, Q, K, and V all come from the same sequence (the encoder attending to itself, or the decoder attending to itself). In encoder-decoder attention, the Queries come from the decoder's current state, while the Keys and Values come from the encoder's final output — this lets each decoder position "look back" at the entire input sequence to decide what's relevant for generating the next output token, which is the mechanism that actually performs the translation/mapping between input and output sequences.</p>
+          <p>In self-attention, Q, K, and V all come from the same sequence. In encoder-decoder attention, the Queries come from the decoder's current state, while Keys and Values come from the top encoder's output. This lets each decoder position "look back" at the entire input sequence to decide what's relevant for generating the next output token — this is literally the mechanism that connects input to output in translation.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Is encoder-decoder attention masked like the decoder's self-attention?" — no, it's unmasked; the decoder is allowed to see the entire input sequence (that's the whole point), the mask only applies to the decoder's own previously-generated output tokens.
+            "Is encoder-decoder attention masked?" — no; the decoder is allowed to see the entire input sequence (that's the point). The mask only applies to the decoder's own previously-generated outputs.
           </div>
         </div>
       </details>
 
       <details class="qa-item">
-        <summary>Why do Transformers use LayerNorm instead of BatchNorm?</summary>
+        <summary>Why LayerNorm rather than BatchNorm in Transformers?</summary>
         <div class="qa-body">
-          <p>BatchNorm normalizes across the batch dimension for each feature, which requires meaningful batch statistics and behaves inconsistently with variable-length sequences and small batch sizes (both common in NLP). LayerNorm instead normalizes across the feature dimension independently for each individual example, making it insensitive to batch size or sequence length — a better fit for sequence models where inputs naturally vary in length.</p>
+          <p>BatchNorm normalizes across the batch dimension per feature, which needs meaningful batch statistics and behaves inconsistently with variable-length sequences and small batches (both common in NLP). LayerNorm normalizes across the feature dimension per individual example — insensitive to batch size and sequence length — a much better fit.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Where exactly are the residual connections and LayerNorm applied in each sub-layer?" — as $\text{LayerNorm}(x + \text{Sublayer}(x))$: the sub-layer's output is added back to its own input (the residual/skip connection) before the sum is normalized.
+            "Where in each sub-layer are the residual + LayerNorm applied?" — as $\text{LayerNorm}(x + \text{Sublayer}(x))$: sub-layer output is added to its own input (residual), then the sum is normalized.
           </div>
         </div>
       </details>
 
       <details class="qa-item">
-        <summary>What's the computational complexity of self-attention with respect to sequence length, and why does it matter?</summary>
+        <summary>What's the computational complexity of self-attention w.r.t. sequence length?</summary>
         <div class="qa-body">
-          <p>Self-attention computes a score between every pair of positions in the sequence, giving $O(n^2)$ time and memory complexity with respect to sequence length $n$ — compared to an RNN's $O(n)$ per-step (though sequential) processing. This quadratic cost is the reason very long context windows are expensive, and it's the direct motivation behind efficient-attention research (sparse attention, linear attention, sliding-window attention) used in modern long-context LLMs.</p>
+          <p>Self-attention scores every pair of positions, so it's $O(n^2)$ in time and memory with respect to sequence length $n$ — compared to an RNN's $O(n)$ per-step (though sequential) processing. This quadratic scaling is why long-context windows are expensive, and it's the direct motivation behind efficient-attention research (sparse, linear, sliding-window attention) used in long-context LLMs.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Given this tradeoff, when might an RNN actually still be preferable to a Transformer?" — for very long sequences under tight memory/latency constraints (e.g. real-time streaming), where RNNs' constant per-step memory can beat attention's quadratic blow-up, even though RNNs sacrifice parallelizability and long-range gradient flow.
+            "When would an RNN actually still be preferable to a Transformer?" — for very long sequences under tight memory/latency constraints (real-time streaming), where RNNs' constant per-step memory beats attention's quadratic blow-up.
           </div>
         </div>
       </details>
 
       <details class="qa-item">
-        <summary>What's the structural difference between an encoder-only, decoder-only, and encoder-decoder Transformer, and give an example model of each.</summary>
+        <summary>Encoder-only vs decoder-only vs encoder-decoder — what's the difference and an example of each?</summary>
         <div class="qa-body">
-          <p><strong>Encoder-only</strong> (e.g. BERT) uses unmasked, bidirectional self-attention — good for understanding tasks (classification, NER) where you have the full input upfront. <strong>Decoder-only</strong> (e.g. GPT) uses masked, causal self-attention only — built for autoregressive generation, predicting one token at a time from left to right. <strong>Encoder-decoder</strong> (e.g. the original Transformer, T5) uses both: an encoder to understand the input plus a decoder with cross-attention into it — a natural fit for sequence-to-sequence tasks like translation or summarization.</p>
+          <p><strong>Encoder-only</strong> (e.g. BERT) uses unmasked bidirectional self-attention — good for understanding tasks (classification, NER) where the full input is known upfront. <strong>Decoder-only</strong> (e.g. GPT, Mistral 7B, LLaMA) uses masked causal self-attention only — built for autoregressive generation, one token at a time. <strong>Encoder-decoder</strong> (e.g. original Transformer, T5) uses both with cross-attention — natural for sequence-to-sequence tasks like translation or summarization.</p>
           <div class="followup">
             <span class="fu-label">Likely follow-up</span>
-            "Which category does a model like Mistral 7B fall into, and why does that matter for how you'd use it?" — decoder-only, like GPT; that's why it's used for open-ended text generation and chat rather than the fill-in-the-blank style tasks BERT excels at — this is exactly the distinction to know going into §20's Applied LLMs section.
+            "Which category is Mistral 7B and why does that matter for your project?" — decoder-only, like GPT; that's why it's suited for open-ended chat/generation rather than the fill-in-the-blank tasks BERT excels at — this feeds directly into §20's Applied LLMs section.
           </div>
         </div>
       </details>
 
-    </div>
+      <details class="qa-item">
+        <summary>Why did Transformers replace RNNs/LSTMs for NLP?</summary>
+        <div class="qa-body">
+          <p>Two big reasons. First, RNNs must process tokens strictly sequentially — you can't compute step $t+1$ before step $t$ — so training can't be parallelized across the sequence dimension; Transformers process all positions simultaneously via matrix multiplication. Second, even LSTMs struggle with very long-range dependencies (gradients degrade over many steps), while self-attention gives every token a direct one-hop connection to every other token regardless of distance, making long-range relationships far easier to learn.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "But attention is $O(n^2)$ — RNNs are only $O(n)$. Isn't that worse?" — per-step, yes, but Transformer training parallelizes across the sequence, so wall-clock time on GPUs is dramatically lower for typical sequence lengths, and the quadratic cost only starts hurting at very long contexts — where efficient-attention variants take over.
+          </div>
+        </div>
+      </details>
 
-    <div class="callout">
-      <span class="callout-label">Further reading</span>
-      This page builds original diagrams in the same step-by-step teaching style as Jay Alammar's <a href="https://jalammar.github.io/illustrated-transformer/" target="_blank" rel="noopener">"The Illustrated Transformer"</a> — worth reading directly alongside this page for his specific visualizations and worked examples.
     </div>
 
     <h2>Video walkthrough</h2>
