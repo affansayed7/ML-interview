@@ -14,7 +14,7 @@ const TOPICS = [
   { n: "12", id: "regularization-dl", title: "Regularization in Deep Learning" },
   { n: "13", id: "cnn", title: "Convolutional Neural Networks" },
   { n: "14", id: "rnn-lstm-gru", title: "RNNs, LSTM & GRU", ready: true },
-  { n: "15", id: "attention-transformers", title: "Attention & Transformers" },
+  { n: "15", id: "attention-transformers", title: "Attention & Transformers", ready: true },
   { n: "16", id: "nlp-preprocessing", title: "NLP: Text Preprocessing & BoW/TF-IDF" },
   { n: "17", id: "word-embeddings", title: "Word Embeddings: Word2Vec, GloVe, Contextual" },
   { n: "18", id: "nlp-tasks", title: "Core NLP Tasks: NER, POS, Sentiment" },
