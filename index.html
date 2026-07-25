@@ -12,7 +12,7 @@
   <main>
 <div class="eyebrow">Core Machine Learning</div>
     <h1 class="title">Everything they'll<br>ask you about <em>ML</em>.</h1>
-    <p class="subtitle">Ten sections, in the order you'd actually learn them — worked math, drafting-table diagrams, and the follow-up questions interviewers use to find the edge of what you know.</p>
+    <p class="subtitle">Core ML, Deep Learning, NLP through Transformers, and the applied LLM stack — in the order you'd actually learn it, with worked math, drafting-table diagrams, and the follow-up questions interviewers use to find the edge of what you know.</p>
 
     <div class="hero-plot">
       <span class="hero-tag">fig. 00 — least squares fit</span>
@@ -45,10 +45,10 @@
 
     <div class="callout">
       <span class="callout-label">How to use this</span>
-      Work top to bottom, §0 → §9. Each section ends with an interview Q&amp;A set — open a question to reveal the answer, and every answer carries the follow-up an interviewer would hit you with next.
+      Work top to bottom, §0 → §20. Each section ends with an interview Q&amp;A set — open a question to reveal the answer, and every answer carries the follow-up an interviewer would hit you with next.
     </div>
 
-    <h2>Sections</h2>
+    <h2>Core Machine Learning</h2>
     <ul class="topic-grid">
       <li><a href="topics/stats-probability.html" class="topic-card">
         <span class="tc-num">00</span>
@@ -108,6 +108,84 @@
         <span class="tc-num">09</span>
         <span class="tc-body"><span class="tc-title">End-to-End ML Pipeline</span>
         <span class="tc-desc">The full "walk me through your process" answer, start to deployment</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+    </ul>
+
+    <h2>Deep Learning</h2>
+    <ul class="topic-grid">
+      <li><a href="topics/nn-foundations.html" class="topic-card">
+        <span class="tc-num">10</span>
+        <span class="tc-body"><span class="tc-title">Neural Network Foundations</span>
+        <span class="tc-desc">Perceptron, MLP, forward propagation, activations, loss functions</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/backprop-optimization.html" class="topic-card">
+        <span class="tc-num">11</span>
+        <span class="tc-body"><span class="tc-title">Backpropagation &amp; Optimization</span>
+        <span class="tc-desc">Chain rule derivation, vanishing/exploding gradients, SGD, Adam</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/regularization-dl.html" class="topic-card">
+        <span class="tc-num">12</span>
+        <span class="tc-body"><span class="tc-title">Regularization in Deep Learning</span>
+        <span class="tc-desc">Dropout, batch normalization, early stopping, weight decay</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/cnn.html" class="topic-card">
+        <span class="tc-num">13</span>
+        <span class="tc-body"><span class="tc-title">Convolutional Neural Networks</span>
+        <span class="tc-desc">Convolution, filters, pooling, why CNNs beat fully-connected for images</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/rnn-lstm-gru.html" class="topic-card">
+        <span class="tc-num">14</span>
+        <span class="tc-body"><span class="tc-title">RNNs, LSTM &amp; GRU</span>
+        <span class="tc-desc">Sequence modeling, vanishing gradients over time, gate mechanisms</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/attention-transformers.html" class="topic-card">
+        <span class="tc-num">15</span>
+        <span class="tc-body"><span class="tc-title">Attention &amp; Transformers</span>
+        <span class="tc-desc">Self-attention, Query/Key/Value math, multi-head attention, positional encoding</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+    </ul>
+
+    <h2>Natural Language Processing</h2>
+    <ul class="topic-grid">
+      <li><a href="topics/nlp-preprocessing.html" class="topic-card">
+        <span class="tc-num">16</span>
+        <span class="tc-body"><span class="tc-title">Text Preprocessing &amp; BoW/TF-IDF</span>
+        <span class="tc-desc">Tokenization, stemming vs lemmatization, Bag of Words, TF-IDF math</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/word-embeddings.html" class="topic-card">
+        <span class="tc-num">17</span>
+        <span class="tc-body"><span class="tc-title">Word Embeddings</span>
+        <span class="tc-desc">Word2Vec (CBOW/Skip-gram), GloVe, static vs contextual embeddings</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/nlp-tasks.html" class="topic-card">
+        <span class="tc-num">18</span>
+        <span class="tc-body"><span class="tc-title">Core NLP Tasks</span>
+        <span class="tc-desc">NER, POS tagging, sentiment analysis — classical vs deep learning approaches</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+      <li><a href="topics/language-models-bert-gpt.html" class="topic-card">
+        <span class="tc-num">19</span>
+        <span class="tc-body"><span class="tc-title">Language Models: BERT vs GPT</span>
+        <span class="tc-desc">N-gram to neural to Transformer LMs, perplexity, encoder vs decoder-only</span></span>
+        <span class="tc-status">planned</span>
+      </a></li>
+    </ul>
+
+    <h2>Applied LLMs</h2>
+    <ul class="topic-grid">
+      <li><a href="topics/applied-llms.html" class="topic-card">
+        <span class="tc-num">20</span>
+        <span class="tc-body"><span class="tc-title">Embeddings, LangChain &amp; Mistral 7B</span>
+        <span class="tc-desc">Vector embeddings, similarity search, LangChain building blocks, RAG, using pretrained LLMs like Mistral 7B without training</span></span>
         <span class="tc-status">planned</span>
       </a></li>
     </ul>
