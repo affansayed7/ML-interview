@@ -18,12 +18,19 @@
     <p class="subtitle">Four classifiers, four different ways of drawing a boundary between classes. Logistic regression gets the deepest treatment since it's the one interviewers dig into most.</p>
 
     <h2>1. Logistic Regression</h2>
-    <p>Say you're predicting whether a loan gets approved: yes or no. Plain linear regression can output any number — 1.5, -0.3, anything — which makes no sense as a probability. Logistic regression fixes this by taking the same weighted sum as linear regression, then squashing it into a 0-to-1 probability using the <strong>sigmoid function</strong>.</p>
+
+    <h3>1.1 What is it?</h3>
+    <p>Logistic regression is a supervised algorithm used for <strong>classification</strong> problems — not regression, despite the name. Instead of predicting a raw number, it predicts the <strong>probability</strong> that an input belongs to a given class. Classic examples: spam vs. not spam, fraud vs. not fraud, disease vs. healthy, loan approved vs. rejected.</p>
+
+    <h3>1.2 Why not just use linear regression?</h3>
+    <p>Linear regression can output any number from $-\infty$ to $+\infty$ — but a probability has to stay between 0 and 1. So logistic regression takes the same weighted sum linear regression would compute, then squashes it into a valid probability using the <strong>sigmoid function</strong>.</p>
 
     <div class="formula-box">
       <div class="fb-label">Sigmoid function</div>
-      $$ \sigma(z) = \frac{1}{1 + e^{-z}} \quad \text{where } z = w^Tx + b $$
+      $$ P(y=1 \mid x) = \sigma(z) = \frac{1}{1 + e^{-z}} \quad \text{where } z = \beta_0 + \beta_1x_1 + \cdots + \beta_nx_n $$
     </div>
+
+    <p>Properties worth remembering: output is always strictly between 0 and 1, it's smooth and differentiable everywhere (which gradient descent needs), and its output is directly interpretable as a probability.</p>
 
     <figure class="diagram">
       <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-shaped sigmoid curve mapping any input to a probability between 0 and 1">
@@ -49,29 +56,49 @@
       <figcaption>Any real number in, a probability between 0 and 1 out. z=0 always maps to exactly 0.5 — that's why 0.5 is the natural threshold.</figcaption>
     </figure>
 
-    <h3>The three steps</h3>
-    <ol>
-      <li>Compute the weighted sum: $z = w^Tx + b$ — identical to linear regression.</li>
-      <li>Pass through sigmoid to get a probability: $\hat{y} = \sigma(z)$.</li>
-      <li>Threshold (usually 0.5): if $\hat{y} \geq 0.5$ predict class 1, else class 0.</li>
-    </ol>
+    <h3>1.3 The full workflow</h3>
+    <figure class="diagram">
+      <svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline diagram from input features through linear combination sigmoid probability threshold to predicted class">
+        <rect x="230" y="20" width="240" height="52" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="350" y="52" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Input features (x)</text>
 
-    <h3>Why not use MSE as the cost function?</h3>
-    <p>Plugging sigmoid into squared error produces a bumpy, non-convex cost surface — gradient descent can get stuck in local minima. Instead, logistic regression uses <strong>log loss</strong> (binary cross-entropy):</p>
+        <line x1="350" y1="72" x2="350" y2="98" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#lrArrow)"/>
 
-    <div class="formula-box">
-      <div class="fb-label">Log loss / binary cross-entropy</div>
-      $$ J(w) = -\frac{1}{n}\sum_{i=1}^{n} \left[ y_i \log(\hat{y}_i) + (1-y_i)\log(1-\hat{y}_i) \right] $$
-    </div>
+        <rect x="200" y="100" width="300" height="60" rx="8" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.3"/>
+        <text x="350" y="124" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Linear combination (z)</text>
+        <text x="350" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">z = &#946;&#8320; + &#946;&#8321;x&#8321; + ... + &#946;ₙxₙ</text>
 
-    <div class="callout">
-      <span class="callout-label">Reading the formula</span>
-      Only one of the two terms is ever "active" per example, depending on whether the true label is 1 or 0. If the model predicts a probability close to the true label, loss is near zero. If it's confidently wrong — predicting 0.01 when the true label is 1 — the loss shoots toward infinity. This convex, well-behaved shape is exactly why gradient descent reliably converges here.
-    </div>
+        <line x1="350" y1="160" x2="350" y2="186" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#lrArrow)"/>
 
-    <p>Interestingly, differentiating this cost function gives a gradient with the exact same clean form as linear regression's: $\frac{\partial J}{\partial w} = \frac{1}{n}X^T(\hat{y} - y)$ — a favorite "derive it on the whiteboard" interview question.</p>
+        <rect x="230" y="188" width="240" height="52" rx="8" fill="rgba(95,216,232,0.1)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="350" y="220" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Sigmoid function</text>
 
-    <h3>The decision boundary</h3>
+        <line x1="350" y1="240" x2="350" y2="266" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#lrArrow)"/>
+
+        <rect x="230" y="268" width="240" height="52" rx="8" fill="rgba(242,180,65,0.1)" stroke="#F2B441" stroke-width="1.3"/>
+        <text x="350" y="300" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Probability P(y=1|x)</text>
+
+        <line x1="350" y1="320" x2="350" y2="346" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#lrArrow)"/>
+
+        <rect x="180" y="348" width="340" height="60" rx="8" fill="rgba(255,122,92,0.1)" stroke="#FF7A5C" stroke-width="1.3"/>
+        <text x="350" y="372" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Threshold (usually 0.5)</text>
+        <text x="350" y="392" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">p &#8805; 0.5 &#8594; class 1, else class 0</text>
+
+        <line x1="350" y1="408" x2="350" y2="434" stroke="#A9C2D1" stroke-width="1.4" marker-end="url(#lrArrow)"/>
+
+        <rect x="230" y="436" width="240" height="52" rx="8" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.6"/>
+        <text x="350" y="468" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="600" fill="#E8F1F5">Predicted class (0 or 1)</text>
+
+        <text x="350" y="530" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">threshold is tunable — lower it to catch more positives (raise recall)</text>
+
+        <defs><marker id="lrArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9C2D1"/></marker></defs>
+      </svg>
+      <figcaption>End to end: features go in, a linear combination gets computed, sigmoid turns it into a probability, and a threshold turns that probability into a hard class label.</figcaption>
+    </figure>
+
+    <h3>1.4 The decision boundary</h3>
+    <p>The decision boundary is simply the line (or hyperplane) where the model is exactly 50/50 — where $z = 0$. On one side, predicted probability is $\geq 0.5$ (class 1); on the other, $< 0.5$ (class 0). The threshold doesn't have to stay at 0.5 — it can be moved depending on whether false positives or false negatives are more costly for the application.</p>
+
     <figure class="diagram">
       <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot of two classes separated by a straight decision boundary line">
         <line x1="60" y1="300" x2="640" y2="300" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
@@ -104,14 +131,133 @@
       <figcaption>The amber line is where z = 0, i.e. p = 0.5 exactly. Logistic regression can only draw a straight line (or flat hyperplane) — a key limitation to mention in interviews.</figcaption>
     </figure>
 
-    <h3>Assumptions</h3>
-    <p>Linearity between features and the <strong>log-odds</strong> (not the raw probability), independent observations, minimal multicollinearity between features, and a reasonably large sample size relative to the number of features for stable estimates.</p>
+    <h3>1.5 Log-odds (logit)</h3>
+    <p>Logistic regression doesn't model the probability directly as a linear function — it models the <strong>log-odds</strong> (also called the logit) as linear:</p>
 
-    <h3>Odds and log-odds (logit)</h3>
-    <p>Odds = $\frac{p}{1-p}$ — probability of the event divided by probability against it. Log-odds is just $\log$ of that. The core insight: logistic regression is really linear regression on the log-odds — that's literally what $z=w^Tx+b$ represents, before sigmoid converts it into a probability.</p>
+    <div class="formula-box">
+      <div class="fb-label">Log-odds / logit</div>
+      $$ \log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1x_1 + \cdots + \beta_nx_n $$
+    </div>
 
-    <h3>Multi-class extensions</h3>
-    <p><strong>One-vs-Rest (OvR):</strong> train one binary classifier per class (that class vs. everything else), predict the class with the highest probability. <strong>Softmax / multinomial regression:</strong> generalizes sigmoid directly to $K$ classes, outputting one full probability distribution instead of $K$ separate binary ones.</p>
+    <p>Why work in log-odds instead of raw probability? Two reasons: probability is bounded between 0 and 1, so a linear model isn't a natural fit for it directly — but log-odds can take <em>any</em> real value, from $-\infty$ to $+\infty$, exactly like a linear model's output. This is also what makes the model linear in its parameters, which is what "logistic regression" actually refers to — a linear model on the log-odds scale.</p>
+
+    <h3>1.6 Cost function — why not MSE?</h3>
+    <p>Plugging sigmoid into squared error produces a bumpy, non-convex cost surface — gradient descent can get stuck in local minima instead of finding the true best fit. Instead, logistic regression uses <strong>log loss</strong> (binary cross-entropy):</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Log loss / binary cross-entropy</div>
+      $$ J = -\frac{1}{n}\sum_{i=1}^{n} \left[ y_i \log(\hat{y}_i) + (1-y_i)\log(1-\hat{y}_i) \right] $$
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">Reading the formula</span>
+      Only one of the two terms is ever "active" per example, depending on whether the true label is 1 or 0. If the model predicts a probability close to the true label, loss is near zero. If it's confidently wrong — predicting 0.01 when the true label is 1 — the loss shoots toward infinity. This convex, well-behaved shape is exactly why gradient descent reliably converges here.
+    </div>
+
+    <h3>1.7 Training</h3>
+    <p>Parameters ($\beta$ values) are learned by minimizing log loss, typically using <strong>gradient descent</strong>, <strong>stochastic gradient descent (SGD)</strong>, or <strong>mini-batch gradient descent</strong>. Differentiating the log loss gives a gradient with the exact same clean form as linear regression's: $\frac{\partial J}{\partial \beta} = \frac{1}{n}X^T(\hat{y} - y)$ — a favorite "derive it on the whiteboard" interview question.</p>
+
+    <h3>1.8 Maximum Likelihood Estimation (MLE)</h3>
+    <p>There's a second, equivalent way to justify the whole setup: instead of thinking "minimize log loss," you can think "choose the parameters that make the observed training labels as likely as possible under the model." That's Maximum Likelihood Estimation. It turns out that <strong>maximizing likelihood is mathematically identical to minimizing log loss</strong> — they're the same optimization problem viewed from two angles, and interviewers sometimes ask for this connection explicitly.</p>
+
+    <h3>1.9 Assumptions</h3>
+    <ul>
+      <li>Observations are independent of each other.</li>
+      <li>Little to no multicollinearity among features.</li>
+      <li>A linear relationship between features and the <strong>log-odds</strong> — not the raw probability.</li>
+      <li>No extreme outliers, which can disproportionately distort the fitted boundary.</li>
+    </ul>
+
+    <h3>1.10 Evaluation metrics</h3>
+    <p>Since this is classification, not regression, MSE and R² don't apply. Everything starts from the <strong>confusion matrix</strong>:</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Confusion matrix showing true positive, false negative, false positive, and true negative counts">
+        <text x="350" y="24" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">Predicted &#8594;</text>
+        <text x="230" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">Positive</text>
+        <text x="440" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">Negative</text>
+        <text x="60" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799" transform="rotate(-90 60 150)">Actual &#8595;</text>
+
+        <text x="140" y="105" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">Positive</text>
+        <text x="140" y="215" font-family="JetBrains Mono" font-size="11" fill="#A9C2D1">Negative</text>
+
+        <rect x="160" y="60" width="140" height="90" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="230" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="600" fill="#5FD8E8">TP: 32</text>
+        <text x="230" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">True Positive</text>
+
+        <rect x="300" y="60" width="140" height="90" fill="rgba(255,122,92,0.1)" stroke="#FF7A5C" stroke-width="1.3"/>
+        <text x="370" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="600" fill="#FF7A5C">FN: 12</text>
+        <text x="370" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">False Negative</text>
+
+        <rect x="160" y="150" width="140" height="90" fill="rgba(255,122,92,0.1)" stroke="#FF7A5C" stroke-width="1.3"/>
+        <text x="230" y="188" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="600" fill="#FF7A5C">FP: 8</text>
+        <text x="230" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">False Positive</text>
+
+        <rect x="300" y="150" width="140" height="90" fill="rgba(95,216,232,0.15)" stroke="#5FD8E8" stroke-width="1.3"/>
+        <text x="370" y="188" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="600" fill="#5FD8E8">TN: 48</text>
+        <text x="370" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">True Negative</text>
+
+        <text x="230" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#F2B441">Accuracy = (32+48) / 100 = 80%</text>
+      </svg>
+      <figcaption>Every classification metric is built from these four counts. TP/TN are correct predictions; FP/FN are the two distinct ways to be wrong.</figcaption>
+    </figure>
+
+    <div class="formula-box">
+      <div class="fb-label">Core metrics derived from the confusion matrix</div>
+      $$ \text{Accuracy} = \frac{TP+TN}{TP+TN+FP+FN} \qquad \text{Precision} = \frac{TP}{TP+FP} \qquad \text{Recall} = \frac{TP}{TP+FN} $$
+      $$ \text{F1} = 2\cdot\frac{\text{Precision}\times\text{Recall}}{\text{Precision}+\text{Recall}} $$
+    </div>
+
+    <p><strong>Accuracy</strong> is only meaningful for balanced datasets — with skewed classes it can look great while the model is useless. <strong>Precision</strong> answers "of everything I predicted positive, how much was actually positive?" — important when false positives are costly (e.g. flagging a legitimate transaction as fraud). <strong>Recall</strong> answers "of everything actually positive, how much did I catch?" — important when false negatives are costly (e.g. missing an actual disease case). <strong>F1</strong> is the harmonic mean of the two, useful when you need a single number that balances both.</p>
+
+    <h4>ROC curve and AUC</h4>
+    <p>The ROC curve plots the True Positive Rate against the False Positive Rate as you sweep the classification threshold from 0 to 1. <strong>AUC</strong> (Area Under the Curve) condenses that whole curve into one number summarizing overall separability between classes, independent of any single threshold choice.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ROC curve plotting true positive rate against false positive rate with area under curve shaded">
+        <line x1="80" y1="280" x2="620" y2="280" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <line x1="80" y1="280" x2="80" y2="40" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <text x="330" y="312" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799">False Positive Rate</text>
+        <text x="30" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E8799" transform="rotate(-90 30 160)">True Positive Rate</text>
+
+        <line x1="80" y1="280" x2="620" y2="40" stroke="rgba(120,190,225,0.3)" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="500" y="90" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">no skill (random)</text>
+
+        <path d="M80 280 C 140 190, 220 90, 340 62 C 430 44, 540 40, 620 40 L 620 280 Z" fill="rgba(95,216,232,0.08)" stroke="none"/>
+        <path d="M80 280 C 140 190, 220 90, 340 62 C 430 44, 540 40, 620 40" fill="none" stroke="#5FD8E8" stroke-width="2.3"/>
+
+        <circle cx="340" cy="62" r="5" fill="#F2B441"/>
+        <line x1="340" y1="62" x2="470" y2="130" stroke="rgba(242,180,65,0.5)" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="476" y="126" font-family="JetBrains Mono" font-size="10.5" fill="#F2B441">t = 0.50</text>
+        <text x="476" y="146" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">TPR 87.5%, FPR 50%</text>
+
+        <text x="200" y="180" font-family="JetBrains Mono" font-size="12" fill="#5FD8E8">AUC = 0.75</text>
+
+        <text x="80" y="32" font-family="JetBrains Mono" font-size="10.5" fill="#6E8799">AUC=1 &#8594; perfect model | AUC=0.5 &#8594; random guessing</text>
+      </svg>
+      <figcaption>Each point on the curve corresponds to a different threshold. AUC of 0.75 here means the model has decent, but not perfect, separation between classes.</figcaption>
+    </figure>
+
+    <h3>1.11 Regularization</h3>
+    <p>Just like linear regression, logistic regression can overfit — regularization adds a penalty on large coefficients to the log loss.</p>
+    <ul>
+      <li><strong>L1 (Lasso):</strong> drives some coefficients exactly to zero — effectively performs automatic feature selection.</li>
+      <li><strong>L2 (Ridge):</strong> shrinks all coefficients smoothly toward zero but rarely to exactly zero — keeps every feature, just dampened.</li>
+      <li><strong>Elastic Net:</strong> a weighted combination of L1 and L2, getting some feature selection plus the stability of L2.</li>
+    </ul>
+
+    <h3>1.12 Types of logistic regression</h3>
+    <ul>
+      <li><strong>Binary logistic regression</strong> — two classes (yes/no, spam/not spam).</li>
+      <li><strong>Multinomial logistic regression</strong> — more than two unordered classes (e.g. cat/dog/bird), via softmax.</li>
+      <li><strong>Ordinal logistic regression</strong> — more than two classes with a natural order (e.g. low/medium/high).</li>
+    </ul>
+
+    <h3>1.13 Advantages</h3>
+    <p>Fast to train, simple to implement, produces calibrated probabilities (not just hard labels), interpretable coefficients (each $\beta$ tells you the direction and rough magnitude of a feature's effect on log-odds), and works well when classes are close to linearly separable.</p>
+
+    <h3>1.14 Limitations</h3>
+    <p>Assumes linearity in the log-odds, sensitive to multicollinearity among features, doesn't naturally capture complex non-linear relationships without manual feature engineering (polynomial terms, interactions), and typically underperforms tree-based models like Random Forest or XGBoost on complex, highly non-linear datasets.</p>
 
     <h2>2. K-Nearest Neighbors (KNN)</h2>
     <p>KNN makes no assumptions about the data's shape at all — it's a "lazy learner." To classify a new point, look at its $k$ closest neighbors in the training data (by some distance metric, usually Euclidean) and take a majority vote of their labels.</p>
