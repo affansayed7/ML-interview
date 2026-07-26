@@ -3,21 +3,329 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>§4 Classification: Logistic, KNN, Naive Bayes, SVM</title>
+<title>§4 Classification: Logistic, KNN, NB, SVM — ML Interview Notes</title>
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
 </head>
 <body>
 <div class="layout">
   <nav class="sidebar"><div id="sidebar-mount"></div></nav>
   <main>
-    <div class="eyebrow">&sect;4</div>
-    <h1 class="title">Classification: Logistic, KNN, Naive Bayes, SVM</h1>
-    <p class="subtitle">Not written yet &mdash; full math, diagrams and interview Q&amp;A land here next.</p>
-    <div class="callout warn"><span class="callout-label">Status</span>
-      Queued. Once the &sect;0 format is signed off, this section gets the same treatment: derivations, blueprint diagrams, Q&amp;A with follow-ups, and a video slot.</div>
+    <div class="eyebrow">§4 · Core Machine Learning</div>
+    <h1 class="title">Classification: Logistic,<br><em>KNN, Naive Bayes, SVM</em></h1>
+    <p class="subtitle">Four classifiers, four different ways of drawing a boundary between classes. Logistic regression gets the deepest treatment since it's the one interviewers dig into most.</p>
+
+    <h2>1. Logistic Regression</h2>
+    <p>Say you're predicting whether a loan gets approved: yes or no. Plain linear regression can output any number — 1.5, -0.3, anything — which makes no sense as a probability. Logistic regression fixes this by taking the same weighted sum as linear regression, then squashing it into a 0-to-1 probability using the <strong>sigmoid function</strong>.</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Sigmoid function</div>
+      $$ \sigma(z) = \frac{1}{1 + e^{-z}} \quad \text{where } z = w^Tx + b $$
+    </div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-shaped sigmoid curve mapping any input to a probability between 0 and 1">
+        <line x1="60" y1="250" x2="640" y2="250" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <line x1="350" y1="270" x2="350" y2="30" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <line x1="60" y1="250" x2="640" y2="250" stroke="rgba(120,190,225,0.2)" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="60" y1="60" x2="640" y2="60" stroke="rgba(120,190,225,0.2)" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="60" y1="155" x2="640" y2="155" stroke="rgba(242,180,65,0.25)" stroke-width="1" stroke-dasharray="2 4"/>
+        <text x="30" y="254" font-family="JetBrains Mono" font-size="11" fill="#6E8799">0</text>
+        <text x="30" y="64" font-family="JetBrains Mono" font-size="11" fill="#6E8799">1</text>
+        <text x="16" y="159" font-family="JetBrains Mono" font-size="11" fill="#F2B441">0.5</text>
+        <text x="600" y="270" font-family="JetBrains Mono" font-size="11" fill="#6E8799">z</text>
+
+        <path d="M75 246 C 180 242, 260 220, 300 175 C 320 155, 320 135, 350 155 C 380 135, 380 155, 400 175 C 440 220, 520 242, 625 246" fill="none" stroke="#5FD8E8" stroke-width="2.3"/>
+        <circle cx="350" cy="155" r="4.5" fill="#F2B441"/>
+
+        <line x1="350" y1="155" x2="470" y2="105" stroke="rgba(242,180,65,0.5)" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="476" y="102" font-family="JetBrains Mono" font-size="11" fill="#F2B441">z=0 → p=0.5 (boundary)</text>
+
+        <text x="440" y="60" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">large +z → p→1</text>
+        <text x="80" y="290" font-family="JetBrains Mono" font-size="11" fill="#5FD8E8">large −z → p→0</text>
+      </svg>
+      <figcaption>Any real number in, a probability between 0 and 1 out. z=0 always maps to exactly 0.5 — that's why 0.5 is the natural threshold.</figcaption>
+    </figure>
+
+    <h3>The three steps</h3>
+    <ol>
+      <li>Compute the weighted sum: $z = w^Tx + b$ — identical to linear regression.</li>
+      <li>Pass through sigmoid to get a probability: $\hat{y} = \sigma(z)$.</li>
+      <li>Threshold (usually 0.5): if $\hat{y} \geq 0.5$ predict class 1, else class 0.</li>
+    </ol>
+
+    <h3>Why not use MSE as the cost function?</h3>
+    <p>Plugging sigmoid into squared error produces a bumpy, non-convex cost surface — gradient descent can get stuck in local minima. Instead, logistic regression uses <strong>log loss</strong> (binary cross-entropy):</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Log loss / binary cross-entropy</div>
+      $$ J(w) = -\frac{1}{n}\sum_{i=1}^{n} \left[ y_i \log(\hat{y}_i) + (1-y_i)\log(1-\hat{y}_i) \right] $$
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">Reading the formula</span>
+      Only one of the two terms is ever "active" per example, depending on whether the true label is 1 or 0. If the model predicts a probability close to the true label, loss is near zero. If it's confidently wrong — predicting 0.01 when the true label is 1 — the loss shoots toward infinity. This convex, well-behaved shape is exactly why gradient descent reliably converges here.
+    </div>
+
+    <p>Interestingly, differentiating this cost function gives a gradient with the exact same clean form as linear regression's: $\frac{\partial J}{\partial w} = \frac{1}{n}X^T(\hat{y} - y)$ — a favorite "derive it on the whiteboard" interview question.</p>
+
+    <h3>The decision boundary</h3>
+    <figure class="diagram">
+      <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot of two classes separated by a straight decision boundary line">
+        <line x1="60" y1="300" x2="640" y2="300" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <line x1="60" y1="300" x2="60" y2="40" stroke="rgba(120,190,225,0.35)" stroke-width="1"/>
+        <text x="600" y="320" font-family="JetBrains Mono" font-size="11" fill="#6E8799">x&#8321;</text>
+        <text x="30" y="34" font-family="JetBrains Mono" font-size="11" fill="#6E8799">x&#8322;</text>
+
+        <line x1="90" y1="60" x2="580" y2="290" stroke="#F2B441" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="430" y="160" font-family="JetBrains Mono" font-size="11" fill="#F2B441" transform="rotate(28 430 160)">z = 0 (boundary)</text>
+
+        <circle cx="150" cy="110" r="6" fill="#5FD8E8"/>
+        <circle cx="200" cy="160" r="6" fill="#5FD8E8"/>
+        <circle cx="230" cy="90" r="6" fill="#5FD8E8"/>
+        <circle cx="280" cy="150" r="6" fill="#5FD8E8"/>
+        <circle cx="320" cy="100" r="6" fill="#5FD8E8"/>
+        <circle cx="180" cy="200" r="6" fill="#5FD8E8"/>
+
+        <circle cx="350" cy="270" r="6" fill="#FF7A5C"/>
+        <circle cx="400" cy="230" r="6" fill="#FF7A5C"/>
+        <circle cx="450" cy="280" r="6" fill="#FF7A5C"/>
+        <circle cx="480" cy="215" r="6" fill="#FF7A5C"/>
+        <circle cx="520" cy="260" r="6" fill="#FF7A5C"/>
+        <circle cx="410" cy="290" r="6" fill="#FF7A5C"/>
+
+        <circle cx="580" cy="60" r="5" fill="#5FD8E8"/>
+        <text x="592" y="64" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">predicted class 1</text>
+        <circle cx="580" cy="82" r="5" fill="#FF7A5C"/>
+        <text x="592" y="86" font-family="JetBrains Mono" font-size="10.5" fill="#A9C2D1">predicted class 0</text>
+      </svg>
+      <figcaption>The amber line is where z = 0, i.e. p = 0.5 exactly. Logistic regression can only draw a straight line (or flat hyperplane) — a key limitation to mention in interviews.</figcaption>
+    </figure>
+
+    <h3>Assumptions</h3>
+    <p>Linearity between features and the <strong>log-odds</strong> (not the raw probability), independent observations, minimal multicollinearity between features, and a reasonably large sample size relative to the number of features for stable estimates.</p>
+
+    <h3>Odds and log-odds (logit)</h3>
+    <p>Odds = $\frac{p}{1-p}$ — probability of the event divided by probability against it. Log-odds is just $\log$ of that. The core insight: logistic regression is really linear regression on the log-odds — that's literally what $z=w^Tx+b$ represents, before sigmoid converts it into a probability.</p>
+
+    <h3>Multi-class extensions</h3>
+    <p><strong>One-vs-Rest (OvR):</strong> train one binary classifier per class (that class vs. everything else), predict the class with the highest probability. <strong>Softmax / multinomial regression:</strong> generalizes sigmoid directly to $K$ classes, outputting one full probability distribution instead of $K$ separate binary ones.</p>
+
+    <h2>2. K-Nearest Neighbors (KNN)</h2>
+    <p>KNN makes no assumptions about the data's shape at all — it's a "lazy learner." To classify a new point, look at its $k$ closest neighbors in the training data (by some distance metric, usually Euclidean) and take a majority vote of their labels.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A new query point with a circle around its k nearest neighbors of two classes">
+        <circle cx="150" cy="90" r="6" fill="#5FD8E8"/>
+        <circle cx="200" cy="140" r="6" fill="#5FD8E8"/>
+        <circle cx="120" cy="180" r="6" fill="#5FD8E8"/>
+        <circle cx="480" cy="100" r="6" fill="#FF7A5C"/>
+        <circle cx="540" cy="160" r="6" fill="#FF7A5C"/>
+        <circle cx="500" cy="220" r="6" fill="#FF7A5C"/>
+        <circle cx="580" cy="90" r="6" fill="#FF7A5C"/>
+
+        <circle cx="300" cy="160" r="9" fill="none" stroke="#F2B441" stroke-width="2"/>
+        <text x="292" y="145" font-family="JetBrains Mono" font-size="11" fill="#F2B441">?</text>
+
+        <circle cx="330" cy="140" r="6" fill="#5FD8E8"/>
+        <circle cx="340" cy="190" r="6" fill="#5FD8E8"/>
+        <circle cx="270" cy="200" r="6" fill="#FF7A5C"/>
+
+        <circle cx="300" cy="160" r="95" fill="rgba(242,180,65,0.06)" stroke="rgba(242,180,65,0.5)" stroke-width="1.3" stroke-dasharray="5 4"/>
+        <text x="180" y="280" font-family="JetBrains Mono" font-size="11" fill="#F2B441">k=3 neighbors inside circle: 2 cyan, 1 coral → predict cyan</text>
+      </svg>
+      <figcaption>No training phase at all — KNN just stores the data and does the distance computation at prediction time. This is why it's called "lazy" learning.</figcaption>
+    </figure>
+
+    <div class="formula-box">
+      <div class="fb-label">Euclidean distance (most common metric)</div>
+      $$ d(x, x') = \sqrt{\sum_{i=1}^{n}(x_i - x'_i)^2} $$
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-label">Critical detail: feature scaling</span>
+      KNN is entirely distance-based, so features on larger numeric scales (e.g. income in the tens of thousands) will completely dominate the distance calculation over features on smaller scales (e.g. age). Always standardize or normalize features before using KNN — this is one of the most common "what would go wrong" interview traps.
+    </div>
+
+    <p><strong>Choosing k:</strong> small $k$ (like 1) is very sensitive to noise and overfits; large $k$ smooths the decision boundary but can underfit and blur genuine class boundaries. $k$ is usually chosen via cross-validation, and using an odd number avoids tied votes in binary classification.</p>
+
+    <h2>3. Naive Bayes</h2>
+    <p>Naive Bayes applies Bayes' theorem to classification, with one simplifying ("naive") assumption: <strong>every feature is conditionally independent of every other feature, given the class</strong>. This is rarely true in real data, but the model works surprisingly well in practice anyway — especially for text classification like spam filtering.</p>
+
+    <div class="formula-box">
+      <div class="fb-label">Bayes' theorem applied to classification</div>
+      $$ P(y \mid x_1,...,x_n) = \frac{P(y)\prod_{i=1}^{n}P(x_i \mid y)}{P(x_1,...,x_n)} $$
+    </div>
+
+    <p>Since the denominator is the same constant across all classes, we can drop it and just pick the class that maximizes the numerator:</p>
+    <div class="formula-box">
+      $$ \hat{y} = \arg\max_y \; P(y)\prod_{i=1}^{n}P(x_i \mid y) $$
+    </div>
+
+    <p>In plain words: for each possible class, multiply the prior probability of that class by how likely each individual feature is, given that class — then pick whichever class gives the highest score.</p>
+
+    <div class="callout">
+      <span class="callout-label">Why "naive"?</span>
+      Assuming every feature is independent given the class is almost always false — in a spam email, the words "free" and "prize" are correlated, not independent. But Naive Bayes only needs to get the <em>ranking</em> of class probabilities right, not the exact probability values, which is why it still classifies well even when the independence assumption is technically wrong.
+    </div>
+
+    <p><strong>Common variants:</strong> Gaussian Naive Bayes assumes continuous features are normally distributed within each class; Multinomial Naive Bayes is built for count data (like word frequencies in text); Bernoulli Naive Bayes handles binary/boolean features (like word present-or-not).</p>
+
+    <p><strong>The zero-probability problem:</strong> if a word in the test set never appeared in training data for a given class, $P(x_i|y) = 0$, which zeroes out the entire product regardless of other evidence. The fix is <strong>Laplace (additive) smoothing</strong> — adding a small constant to every count so no probability is ever exactly zero.</p>
+
+    <h2>4. Support Vector Machines (SVM)</h2>
+    <p>SVM takes a different philosophy entirely: instead of modeling probabilities, it looks for the decision boundary (hyperplane) that maximizes the <strong>margin</strong> — the distance between the boundary and the closest points from each class. Those closest points are called <strong>support vectors</strong>, and they're the only points that actually determine where the boundary sits.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Maximum margin hyperplane between two classes with support vectors highlighted and margin lines shown">
+        <line x1="150" y1="40" x2="550" y2="280" stroke="#F2B441" stroke-width="2.2"/>
+        <line x1="110" y1="60" x2="510" y2="300" stroke="rgba(242,180,65,0.4)" stroke-width="1.3" stroke-dasharray="5 4"/>
+        <line x1="190" y1="20" x2="590" y2="260" stroke="rgba(242,180,65,0.4)" stroke-width="1.3" stroke-dasharray="5 4"/>
+        <text x="440" y="150" font-family="JetBrains Mono" font-size="11" fill="#F2B441" transform="rotate(32 440 150)">maximum margin hyperplane</text>
+
+        <circle cx="120" cy="90" r="6" fill="#5FD8E8"/>
+        <circle cx="180" cy="130" r="6" fill="#5FD8E8"/>
+        <circle cx="90" cy="160" r="6" fill="#5FD8E8"/>
+        <circle cx="150" cy="60" r="6" fill="#5FD8E8"/>
+
+        <circle cx="130" cy="105" r="9" fill="none" stroke="#5FD8E8" stroke-width="2"/>
+        <text x="60" y="110" font-family="JetBrains Mono" font-size="10" fill="#5FD8E8">support vector</text>
+
+        <circle cx="560" cy="220" r="6" fill="#FF7A5C"/>
+        <circle cx="600" cy="180" r="6" fill="#FF7A5C"/>
+        <circle cx="530" cy="260" r="6" fill="#FF7A5C"/>
+        <circle cx="620" cy="240" r="6" fill="#FF7A5C"/>
+
+        <circle cx="545" cy="235" r="9" fill="none" stroke="#FF7A5C" stroke-width="2"/>
+        <text x="480" y="290" font-family="JetBrains Mono" font-size="10" fill="#FF7A5C">support vector</text>
+      </svg>
+      <figcaption>Only the circled points (support vectors) determine the boundary. Every other point could move around freely without changing the hyperplane at all — a fundamentally different philosophy from logistic regression, which uses every point via log loss.</figcaption>
+    </figure>
+
+    <p><strong>Hard margin vs. soft margin:</strong> a hard margin requires perfect separation with zero misclassifications — unrealistic for most real data. Soft margin SVM introduces a slack variable and a regularization parameter $C$ that trades off margin width against tolerating some misclassified points. Small $C$ → wider margin, more tolerance for errors (less overfitting). Large $C$ → narrower margin, fewer tolerated errors (more overfitting risk).</p>
+
+    <h3>The kernel trick</h3>
+    <p>Real data is often not linearly separable in its original space. The <strong>kernel trick</strong> implicitly projects data into a higher-dimensional space where it becomes linearly separable — without ever actually computing the coordinates in that higher-dimensional space, which would be expensive. Common kernels: linear (no transformation), polynomial, and RBF (Radial Basis Function / Gaussian) — RBF is the most popular default since it can model very flexible, non-linear boundaries.</p>
+
+    <div class="callout">
+      <span class="callout-label">Intuition for the kernel trick</span>
+      Imagine points on a 2D plane where a circle (not a line) separates two classes — impossible for a straight line to solve. Map every point to 3D by adding a third coordinate equal to its distance from the origin, and suddenly a flat plane in 3D can separate them perfectly. The kernel trick computes the effect of this mapping mathematically via a "kernel function," without ever materializing the expensive higher-dimensional coordinates.
+    </div>
+
+    <h2>Interview Q&amp;A</h2>
+    <div class="qa-section">
+
+      <details class="qa-item">
+        <summary>Why is logistic regression called "regression" if it's used for classification?</summary>
+        <div class="qa-body">
+          <p>Because under the hood it's still fitting a linear equation, $z = w^Tx + b$, exactly like linear regression. The only difference is that $z$ gets passed through sigmoid to convert it into a probability, which is then thresholded into a class. It's linear regression on the log-odds, dressed up for classification.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "So what exactly does the model learn to be linear in?" — the log-odds of the outcome, not the probability itself. The probability-vs-feature relationship is the S-curve; the log-odds-vs-feature relationship is a straight line.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Why can't you use MSE as the cost function for logistic regression?</summary>
+        <div class="qa-body">
+          <p>Plugging sigmoid into MSE produces a non-convex cost surface with multiple local minima, so gradient descent isn't guaranteed to find the best solution. Log loss (binary cross-entropy) keeps the cost function convex, guaranteeing convergence to the global minimum, and it also penalizes confident wrong predictions much more heavily — which is the behavior you actually want from a probability model.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Derive the gradient of the log loss." — it works out to $\frac{1}{n}X^T(\hat{y}-y)$, structurally identical to linear regression's gradient, because the derivative of sigmoid conveniently cancels terms in the chain rule.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>How do you handle class imbalance with logistic regression?</summary>
+        <div class="qa-body">
+          <p>Several options: resample the data (oversample the minority class, e.g. SMOTE, or undersample the majority), assign class weights so the model is penalized more for misclassifying the minority class, adjust the classification threshold away from 0.5, or evaluate with precision/recall/F1/ROC-AUC instead of raw accuracy, since accuracy is misleading on imbalanced data.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Why is accuracy misleading here?" — if 99% of data is one class, always predicting that class gives 99% accuracy while being completely useless at detecting the minority class.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Why does KNN need feature scaling but logistic regression doesn't strictly need it?</summary>
+        <div class="qa-body">
+          <p>KNN's predictions are based entirely on distance between points, so any feature with a larger numeric range will dominate the distance calculation regardless of its actual importance. Logistic regression instead learns a weight per feature via gradient descent, so it can in principle learn to downweight a large-scale feature — though in practice scaling still helps gradient descent converge faster.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Name another distance-based algorithm with the same issue." — K-Means clustering and SVM with an RBF kernel both have the same sensitivity to feature scale.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>What happens with very small vs. very large k in KNN?</summary>
+        <div class="qa-body">
+          <p>Very small k (like k=1) fits to individual noisy points, creating a jagged, overfit decision boundary and high variance. Very large k oversmooths the boundary, potentially ignoring genuine local structure and underfitting — in the extreme, k equal to the whole dataset just predicts the majority class everywhere. The right k is usually found via cross-validation, balancing this bias-variance tradeoff.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Why use an odd k for binary classification?" — to avoid tied votes that would need arbitrary tie-breaking.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Why is Naive Bayes called "naive," and why does it still work well despite that assumption being false?</summary>
+        <div class="qa-body">
+          <p>It's "naive" because it assumes all features are conditionally independent given the class — in reality, features are almost always correlated to some degree. Despite that, Naive Bayes only needs to correctly rank class probabilities relative to each other, not compute their exact values, so violations of independence often don't change which class ends up with the highest score. This is why it performs surprisingly well on tasks like spam detection even though the independence assumption is clearly wrong.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "What's Laplace smoothing and why is it needed?" — without it, a feature value unseen in training gives that class a probability of exactly zero regardless of other evidence; adding a small constant to every count avoids this.
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>What are support vectors, and why does SVM only care about them?</summary>
+        <div class="qa-body">
+          <p>Support vectors are the training points closest to the decision boundary — the ones that actually define where the maximum-margin hyperplane sits. Every other point could be moved (as long as it stays on the correct side, outside the margin) without changing the boundary at all. This is fundamentally different from logistic regression, where every single point contributes to the log loss and therefore influences the final boundary.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "What does the C parameter control?" — the tradeoff between margin width and tolerating misclassified points; small C allows more slack (wider margin, more bias), large C punishes misclassification harder (narrower margin, more variance).
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Explain the kernel trick in SVM in simple terms.</summary>
+        <div class="qa-body">
+          <p>When data isn't linearly separable in its original space, the kernel trick implicitly maps it into a higher-dimensional space where a straight hyperplane can separate it — without ever explicitly computing those higher-dimensional coordinates, which would be computationally expensive or even infinite-dimensional (as with the RBF kernel). Instead, a kernel function computes what the dot product would be in that higher-dimensional space directly from the original points.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "When would you pick a linear kernel over RBF?" — when the data is already close to linearly separable and you want a simpler, faster, less overfit-prone model, or when the number of features is very large relative to the number of samples (common in text data).
+          </div>
+        </div>
+      </details>
+
+      <details class="qa-item">
+        <summary>Compare logistic regression, KNN, Naive Bayes, and SVM at a high level — when would you pick each?</summary>
+        <div class="qa-body">
+          <p><strong>Logistic regression:</strong> fast, interpretable, gives calibrated probabilities — good default baseline, works best when classes are roughly linearly separable. <strong>KNN:</strong> simple, no training phase, but slow at prediction time on large datasets and sensitive to feature scale and irrelevant features. <strong>Naive Bayes:</strong> extremely fast to train, works well on high-dimensional sparse data like text, but the independence assumption limits accuracy on strongly correlated features. <strong>SVM:</strong> strong performance on complex, non-linear boundaries via kernels, robust to outliers far from the margin, but slower to train on very large datasets and less naturally interpretable.</p>
+          <div class="followup">
+            <span class="fu-label">Likely follow-up</span>
+            "Which would you pick for a spam classifier and why?" — Naive Bayes is a classic strong baseline for text/spam because it handles high-dimensional sparse word-count features efficiently and trains almost instantly, even though its independence assumption is technically violated by correlated words.
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+    <h2>Video walkthrough</h2>
+    <div class="video-slot">
+      [ paste a YouTube embed or link here — e.g. &lt;iframe src="https://www.youtube.com/embed/VIDEO_ID"&gt;&lt;/iframe&gt; ]
+    </div>
+
     <div class="topic-footer-nav">
-      <a href="regression.html">&larr; Previous</a>
-      <a href="trees.html">Next &rarr;</a>
+      <a href="regression.html">← §3 Regression</a>
+      <a href="trees.html">§5 Decision Trees →</a>
     </div>
   </main>
 </div>
