@@ -3,7 +3,7 @@ const TOPICS = [
   { n: "1", id: "preprocessing", title: "Data Preprocessing & Cleaning" },
   { n: "2", id: "foundations", title: "Foundations: Bias-Variance & Regularization" },
   { n: "3", id: "regression", title: "Regression: Linear & Polynomial", ready: true },
-  { n: "4", id: "classification", title: "Classification: Logistic, KNN, NB, SVM" },
+  { n: "4", id: "classification", title: "Classification: Logistic, KNN, NB, SVM", ready: true },
   { n: "5", id: "trees", title: "Decision Trees" },
   { n: "6", id: "ensemble", title: "Ensemble Learning" },
   { n: "7", id: "unsupervised", title: "Unsupervised: K-Means, PCA" },
